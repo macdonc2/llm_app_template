@@ -1,0 +1,19 @@
+image:
+  repository: myregistry.azurecr.io/rag-api
+  tag: latest
+
+service:
+  port: 80
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+env:
+  OPENAI_API_KEY:
+  DATABASE_URL: "postgresql://postgres:secretpassword@my-postgresql.data.svc.cluster.local:5432/postgres"
