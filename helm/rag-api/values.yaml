@@ -1,8 +1,9 @@
 image:
-  repository: myregistry.azurecr.io/rag-api
+  repository: macdoncml.azurecr.io/rag-api
   tag: latest
 
 service:
+  externalTrafficPolicy: Local
   port: 80
   type: ClusterIP
 
@@ -15,5 +16,8 @@ ingress:
           pathType: Prefix
 
 env:
-  OPENAI_API_KEY:
-  DATABASE_URL: "postgresql://postgres:secretpassword@my-postgresql.data.svc.cluster.local:5432/postgres"
+  DATABASE_URL: postgresql://postgres:secretpassword@my-postgresql.data.svc.cluster.local:5432/postgres
+  LLM_PROVIDER: openai
+  EMBEDDING_PROVIDER: openai
+  USER_REPOSITORY: postgres
+  PROMPT_PATH: src/app/prompts

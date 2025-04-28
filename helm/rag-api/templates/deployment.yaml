@@ -18,10 +18,39 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port }}
           env:
+            # All sensitive values from secret
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: openai-secret
-                  key: api-key
+                  name: rag-api-secret
+                  key: OPENAI_API_KEY
             - name: DATABASE_URL
-              value: {{ .Values.env.DATABASE_URL | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: rag-api-secret
+                  key: DATABASE_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rag-api-secret
+                  key: SECRET_KEY
+            - name: USER_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: rag-api-secret
+                  key: USER_SALT
+
+            # Non-secret values from values.yaml
+            - name: LLM_PROVIDER
+              value: {{ .Values.env.LLM_PROVIDER | quote }}
+            - name: EMBEDDING_PROVIDER
+              value: {{ .Values.env.EMBEDDING_PROVIDER | quote }}
+            - name: USER_REPOSITORY
+              value: {{ .Values.env.USER_REPOSITORY | quote }}
+            - name: PROMPT_PATH
+              value: {{ .Values.env.PROMPT_PATH | quote }}
+
+          # OPTIONAL: If you want to inject all envs from the secret at once
+          # envFrom:
+          #   - secretRef:
+          #       name: rag-api-secret

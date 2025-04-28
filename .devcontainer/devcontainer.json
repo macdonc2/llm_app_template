@@ -1,22 +1,24 @@
 {
-  "name": "Python Dev Container",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "settings": {
-    "terminal.integrated.defaultProfile.linux": "bash"
-  },
-  "extensions": [
-    "ms-python.python"
-  ],
-  "postCreateCommand": "pip install -r requirements.txt",
-  "remoteUser": "vscode",
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace,type=bind"
-  ],
-  "workspaceFolder": "/workspace",
-  "runArgs": [
-    "--dns", "8.8.8.8",
-    "--dns", "1.1.1.1"
-  ]
-}
+    "name": "Python Dev Container",
+    "build": {
+      "dockerfile": "Dockerfile",
+       "context": ".."
+    },
+    "settings": {
+      "terminal.integrated.defaultProfile.linux": "bash"
+    },
+    "extensions": [
+      "ms-python.python"
+    ],
+    "postCreateCommand": "apt-get update && apt-get install -y docker.io && pip install -r requirements.txt",
+    "remoteUser": "root",
+    "mounts": [
+      "source=${localWorkspaceFolder},target=/workspace,type=bind",
+      "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
+    "workspaceFolder": "/workspace",
+    "runArgs": [
+      "--dns", "8.8.8.8",
+      "--dns", "1.1.1.1"
+    ]
+  }

@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alembic-upgrade
+  namespace: rag
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migrate
+        image: macdoncml.azurecr.io/rag-api:latest
+        command: ["alembic", "upgrade", "head"]
+        envFrom:
+          - secretRef:
+              name: rag-api-secret
+        env:
+          - name: PYTHONPATH
+            value: /app/src
