@@ -1,204 +1,221 @@
-# FastAPI RAG + Auth API on Azure Kubernetes Service (AKS)
+# RAG + Auth API
 
-This project is a **FastAPI-based RAG + Auth API** with robust authentication, async DB migrations (Alembic), secure secret management, and production-ready deployment on Azure Kubernetes Service (AKS).
+## Overview
 
----
+This repository provides a FastAPI service supporting:
 
-## 📋 Table of Contents
-
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Setup](#setup)
-  - [Azure Resource Preparation](#azure-resource-preparation)
-  - [Build and Push Docker Image](#build-and-push-docker-image)
-  - [Configure and Attach Azure Container Registry](#configure-and-attach-azure-container-registry)
-  - [AKS Cluster and NGINX Ingress](#aks-cluster-and-nginx-ingress)
-  - [Secrets & Environment Variables](#secrets--environment-variables)
-  - [Deployment with Helm](#deployment-with-helm)
-  - [DNS Setup](#dns-setup)
-  - [Database Migrations (Alembic)](#database-migrations-alembic)
-- [Usage](#usage)
-- [Best Practices & Security](#best-practices--security)
-- [Troubleshooting](#troubleshooting)
+- User registration & JWT-based authentication
+- Retrieval-Augmented Generation (RAG) endpoint powered by OpenAI
+- Clean architecture with Dependency Injection, Registry, Ports & Adapters, Services, and Routers
+- Asynchronous PostgreSQL access via SQLAlchemy and Alembic migrations
+- Dockerized build & VS Code Dev Container setup
+- Kubernetes deployment on Azure AKS using Helm charts
 
 ---
 
-## Prerequisites
+## Repository Structure
 
-- Python 3.11
-- Docker
-- Azure CLI
-- kubectl
-- Helm
-- Azure Subscription with AKS and ACR permissions
-- A domain/subdomain you can manage
-
----
-
-## Project Structure
-
-```
-project-root/
-├── Dockerfile
-├── requirements.txt
-├── alembic.ini
-├── alembic/
+```text
+base_app/
+├── .devcontainer/                # VS Code Remote Container config
+│   ├── devcontainer.json
+│   └── Dockerfile
+├── .env                          # Environment variables (credentials & settings)
+├── alembic.ini                   # Alembic configuration
+├── alembic/                      # Database migrations
 │   ├── env.py
 │   └── versions/
-├── src/
-│   └── app/
-│       ├── main.py
-│       └── ...
-└── helm/
-    └── rag-api/
-        ├── templates/
-        │   ├── deployment.yaml
-        │   ├── service.yaml
-        │   ├── ingress.yaml
-        │   └── alembic-job.yaml
-        └── values.yaml
+│       ├── .empty
+│       ├── 20250429_create_users_table.py
+│       └── 20250429_add_openai_key.py
+├── docker/                       # Production Docker image
+│   └── Dockerfile
+├── helm/                         # Helm charts for Kubernetes deployment
+│   ├── cert-infra/               # cert-manager ClusterIssuer chart
+│   │   ├── Chart.yaml
+│   │   └── templates/
+│   │       └── cluster-issuer-macdonml.yaml
+│   └── rag-api/                  # RAG API application chart
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       ├── app-secrets.yaml      # Kubernetes Secret manifest template
+│       └── templates/
+│           ├── alembic-job.yaml
+│           ├── deployment.yaml
+│           ├── ingress.yaml
+│           └── service.yaml
+├── requirements.txt              # Python dependencies
+└── src/
+    └── app/                     # Application source code
+        ├── main.py              # FastAPI app entrypoint
+        ├── config.py            # Pydantic Settings for env vars
+        ├── db.py                # SQLAlchemy Async engine & session
+        ├── dependencies.py      # FastAPI dependency providers
+        ├── registry.py          # Maps provider names to adapter classes
+        ├── models.py            # SQLAlchemy ORM models
+        ├── schemas.py           # Pydantic schemas for I/O
+        ├── security.py          # JWT auth & password hashing
+        ├── utils.py             # Helper functions (salt, ID generation)
+        ├── adapters/            # Infrastructure implementations
+        │   ├── openai_llm_adapter.py
+        │   ├── openai_embedding_adapter.py
+        │   └── postgres_user_repository.py
+        ├── ports/               # Abstract base classes (Ports)
+        │   ├── llm_port.py
+        │   ├── embedding_port.py
+        │   └── user_repository_port.py
+        ├── services/            # Business logic
+        │   ├── user_service.py
+        │   ├── llm_service.py
+        │   └── retrieval_service.py
+        └── routers/             # HTTP endpoints
+            ├── auth.py          # /token
+            ├── users.py         # /users and /users/me
+            └── rag.py           # /rag/query
 ```
 
 ---
 
-## Setup
+## Concepts & Patterns
 
-### Azure Resource Preparation
+### Dependency Injection
+- Implemented in `src/app/dependencies.py` with FastAPI's `Depends()`.
+- Provides decoupled constructors for core components (DB, services, providers).
 
-```sh
-az group create --name my-aks-rg --location eastus
-az acr create --resource-group my-aks-rg --name myacrregistry --sku Basic
-```
+### Registry
+- `src/app/registry.py` defines mappings:
+  - **LLM_PROVIDERS**: e.g. OpenAILLMAdapter
+  - **EMBEDDING_PROVIDERS**: e.g. OpenAIEmbeddingAdapter
+  - **USER_REPOSITORY_PROVIDERS**: e.g. PostgresUserRepository
 
-### Build and Push Docker Image
+### Ports & Adapters
+- **Ports** (`src/app/ports/`): abstract interfaces:
+  - `LLMPort` for chat completions
+  - `EmbeddingPort` for vector embeddings
+  - `UserRepositoryPort` for user persistence
+- **Adapters** (`src/app/adapters/`): concrete implementations:
+  - `OpenAILLMAdapter` (uses OpenAI SDK)
+  - `OpenAIEmbeddingAdapter` (uses OpenAI SDK)
+  - `PostgresUserRepository` (SQLAlchemy + AsyncSession)
 
-```sh
-az acr login --name myacrregistry
-docker build -t myacrregistry.azurecr.io/rag-api:latest .
-docker push myacrregistry.azurecr.io/rag-api:latest
-```
+### Services
+- Business logic lives in `src/app/services/`:
+  - `UserService`: handles user creation & lookup
+  - `LLMService`: wraps LLM chat interactions
+  - `RetrievalService`: embeds queries & fetches relevant docs for RAG
 
-### Configure and Attach Azure Container Registry
+### Routers (Routes)
+- FastAPI routers in `src/app/routers/`:
+  - **`auth.py`**: `/token` endpoint issues JWTs
+  - **`users.py`**: `/users` registration, `/users/me` profile
+  - **`rag.py`**: `/rag/query` for Retrieval-Augmented Generation
 
-```sh
-az aks create     --resource-group my-aks-rg     --name my-aks-cluster     --node-count 3     --generate-ssh-keys     --attach-acr myacrregistry
+### Schemas & Models
+- **Schemas** (`src/app/schemas.py`): Pydantic models for request/response validation
+- **Models** (`src/app/models.py`): SQLAlchemy ORM definitions (e.g. `User` table)
 
-az aks get-credentials --resource-group my-aks-rg --name my-aks-cluster
-```
+---
 
-### AKS Cluster and NGINX Ingress
+## Configuration
 
-```sh
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-kubectl create namespace ingress
+- Environment variables are loaded by Pydantic `BaseSettings` in `config.py` via the `.env` file.
+- Required vars:
+  - `DATABASE_URL`
+  - `OPENAI_API_KEY`
+  - `SECRET_KEY`
+  - `USER_SALT`
+  - (Optionally) `LLM_PROVIDER`, `EMBEDDING_PROVIDER`, `USER_REPOSITORY`
 
-helm install nginx-ingress ingress-nginx/ingress-nginx     --namespace ingress     --set controller.service.type=LoadBalancer     --set controller.service.externalTrafficPolicy=Local
+Copy `.env` to set your local credentials before running.
 
-kubectl get svc -n ingress -w  # Wait for EXTERNAL-IP to appear
-```
+---
 
-### Secrets & Environment Variables
+## Local Development & Docker
 
-```sh
-kubectl create namespace rag
+1. **Environment**: Duplicate `.env` with real values.
+2. **Docker Build**:
+   ```bash
+   docker build -t rag-api:local -f docker/Dockerfile .
+   ```
+3. **Run Container**:
+   ```bash
+   docker run --env-file .env -p 80:80 rag-api:local
+   ```
+4. **VS Code Dev Container**: Open `base_app` folder in VS Code and reopen in container (uses `.devcontainer`).
 
-kubectl create secret generic rag-api-secret   --from-literal=DATABASE_URL="postgresql+asyncpg://postgres:YOURPW@az-postgres-host:5432/YOURDB"   --from-literal=OPENAI_API_KEY="sk-..."   --from-literal=SECRET_KEY="changeme-supersecret"   --from-literal=USER_SALT="changeme-pepper"   --namespace rag
-```
+---
 
-### Deployment with Helm
+## Database Migrations with Alembic
 
-1. Edit `helm/rag-api/values.yaml` with your image, env, and ingress config.
-2. Deploy with:
-   ```sh
-   helm upgrade --install rag-api ./helm/rag-api      --namespace rag      --set image.repository=myacrregistry.azurecr.io/rag-api      --set image.tag=latest
+1. **Initialize** (already configured): check `alembic.ini` & `alembic/env.py`.
+2. **Create Revision**:
+   ```bash
+   alembic revision --autogenerate -m "<message>"
+   ```
+3. **Apply Migrations**:
+   ```bash
+   alembic upgrade head
    ```
 
-### DNS Setup
-
-- Add an A record in your DNS provider or Azure DNS:
-  ```
-  api.example.com → <your-ingress EXTERNAL-IP>
-  ```
-
-### Database Migrations (Alembic)
-
-Create a Kubernetes Job (`alembic-job.yaml`):
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: alembic-upgrade
-  namespace: rag
-spec:
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-      - name: migrate
-        image: myacrregistry.azurecr.io/rag-api:latest
-        command: ["alembic", "upgrade", "head"]
-        envFrom:
-          - secretRef:
-              name: rag-api-secret
-        env:
-          - name: PYTHONPATH
-            value: /app/src
-```
-
-Apply and check logs:
-```sh
-kubectl apply -f helm/rag-api/templates/alembic-job.yaml
-kubectl logs job/alembic-upgrade -n rag
-```
-
-To rerun:
-```sh
-kubectl delete job alembic-upgrade -n rag
-kubectl apply -f helm/rag-api/templates/alembic-job.yaml
-```
+Migrations live under `alembic/versions/` and are automatically applied by the Kubernetes Job.
 
 ---
 
-## Usage
+## Kubernetes Deployment on Azure AKS (Helm)
 
-- API docs: `http://api.example.com/docs`
-- **Obtain a JWT**:
-  ```python
-  import requests
-  url = "http://api.example.com/token"
-  data = {"username": "your_email", "password": "your_password"}
-  r = requests.post(url, data=data)
-  print("Token:", r.json())
-  ```
-- **Call Protected Endpoint**:
-  ```python
-  headers = {"Authorization": f"Bearer {token}"}
-  r = requests.get("http://api.example.com/users/me", headers=headers)
-  print(r.json())
-  ```
+### Prerequisites
+- Azure CLI, kubectl & Helm installed
+- Azure Resource Group, Azure Container Registry (ACR), and AKS cluster with ACR integrated
+
+### 1. Build & Push Image to ACR
+```bash
+az acr login --name <ACR_NAME>
+docker build -t <ACR_NAME>.azurecr.io/rag-api:latest -f docker/Dockerfile .
+docker push <ACR_NAME>.azurecr.io/rag-api:latest
+```
+
+### 2. Install Cert-Manager & ClusterIssuer
+```bash
+# Add cert-manager repo & install
+helm repo add jetstack https://charts.jetstack.io
+helm install cert-manager jetstack/cert-manager   --namespace cert-manager --create-namespace --version v1.11.0
+
+# Create your azure-dns secret in cert-manager namespace
+kubectl create secret generic azure-dns   --namespace cert-manager   --from-literal=subscription-id=<SUB_ID>   --from-literal=tenant-id=<TENANT_ID>   --from-literal=client-id=<CLIENT_ID>   --from-literal=client-secret=<CLIENT_SECRET>
+
+# Deploy our ClusterIssuer
+helm upgrade --install cert-infra helm/cert-infra   --namespace cert-manager
+```
+
+### 3. Deploy RAG API with Helm
+1. **Apply Secrets** (fills in DATABASE_URL, API keys, etc):
+   ```bash
+   kubectl apply -f helm/rag-api/app-secrets.yaml --namespace default
+   ```
+2. **Install/Upgrade Chart**:
+   ```bash
+   helm upgrade --install rag-api helm/rag-api      --namespace default --create-namespace
+   ```
+3. **Run Alembic Migrations** via Kubernetes Job:
+   ```bash
+   kubectl get jobs -n default
+   kubectl logs job/alembic-upgrade -n default
+   ```
+4. **Verify Service & Ingress**
+   ```bash
+   kubectl get svc,ing -n default
+   ```
 
 ---
 
-## Best Practices & Security
+## Summary
 
-- Use HTTPS on Ingress for all non-local/prod endpoints.
-- Restrict ingress: Use Azure NSGs or K8s NetworkPolicy if appropriate.
-- Never commit secrets to git; always use K8s Secrets.
-- Monitor with Azure Log Analytics and AKS built-in monitoring.
-- Keep Alembic migrations in `alembic/versions/` and run migrations only via Job, not inside the app container.
+This project demonstrates a production-ready FastAPI service with:
 
----
+- **Clean Architecture**: DI, Registry, Ports & Adapters, Services, Routers
+- **Security**: JWT auth & hashed passwords
+- **Async DB Access**: SQLAlchemy + Alembic migrations
+- **Containerization**: Docker & VS Code Dev Containers
+- **Cloud Deployment**: Helm charts on Azure AKS with cert-manager
 
-## Troubleshooting
-
-- **Alembic migration fails**:
-  - Ensure `alembic.ini` and `alembic/` are in `/app`, image rebuilt and pushed.
-  - Verify environment variables are loaded from K8s Secret.
-- **External access fails**:
-  - Check Ingress EXTERNAL-IP.
-  - Ensure Load Balancer health probe is healthy (HTTP 200 on `/`).
-  - Check DNS propagation.
-- **Python import errors**:
-  - Use `from app...` in Alembic `env.py` if `PYTHONPATH=/app/src`.
+Follow these guides to extend features, add tests, and deploy confidently. 🚀
