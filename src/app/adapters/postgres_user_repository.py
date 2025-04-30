@@ -15,7 +15,7 @@ class PostgresUserRepository(UserRepositoryPort):
         salt = new_salt()
         user_id = generate_userid(user.email, salt)
         hashed_pw = hash_password(user.password)
-        db_user = User(id=user_id, email=user.email, salt=salt, hashed_password=hashed_pw)
+        db_user = User(id=user_id, email=user.email, salt=salt, hashed_password=hashed_pw, openai_api_key=user.open_ai_api_key)
         self.db.add(db_user)
         try:
             await self.db.commit()

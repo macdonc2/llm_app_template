@@ -3,8 +3,9 @@ from ..ports.llm_port import LLMPort
 from ..config import settings
 
 class OpenAILLMAdapter(LLMPort):
-    def __init__(self):
-        self.client = OpenAI(api_key=settings.openai_api_key)
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.client = OpenAI(api_key=self.api_key)
 
     async def chat(self, prompt: str) -> str:
         resp = await self.client.chat.completions.create(

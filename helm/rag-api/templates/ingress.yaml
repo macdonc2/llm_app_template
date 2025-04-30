@@ -4,13 +4,20 @@ metadata:
   name: rag-api
   annotations:
     kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-dns"
 spec:
+  tls:
+    - hosts:
+{{- range .Values.ingress.hosts }}
+        - {{ .host | quote }}
+{{- end }}
+      secretName: "rag-api-tls"
   rules:
 {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-        {{- range .paths }}
+{{- range .paths }}
           - path: {{ .path | quote }}
             pathType: {{ .pathType | default "Prefix" | quote }}
             backend:
@@ -18,5 +25,5 @@ spec:
                 name: rag-api
                 port:
                   number: {{ $.Values.service.port }}
-        {{- end }}
+{{- end }}
 {{- end }}

@@ -1,0 +1,33 @@
+{{- /* look up your azure-dns Secret */ -}}
+{{- $azure := lookup "v1" "Secret" "cert-manager" "azure-dns" -}}
+{{- if not $azure }}
+{{- fail "azure-dns secret not found in cert-manager namespace" }}
+{{- end }}
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-dns
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  acme:
+    server:  https://acme-v02.api.letsencrypt.org/directory
+    email:   macdonc2@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+    - dns01:
+        azureDNS:
+          resourceGroupName: "MC_rg1_rag-aks_centralus"
+          hostedZoneName:    "macdonml.com"
+
+          # Pull everything except the secret from your azure-dns Secret:
+          subscriptionID: '{{ index $azure.data "subscription-id" | b64dec }}'
+          tenantID:       '{{ index $azure.data "tenant-id"       | b64dec }}'
+          clientID:       '{{ index $azure.data "client-id"         | b64dec }}'
+
+          # Only the password comes from the Secret:
+          clientSecretSecretRef:
+            name: azure-dns
+            key:  client-secret
