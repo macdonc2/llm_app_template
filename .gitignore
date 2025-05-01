@@ -1,4 +1,4 @@
 .env
 .venv
 
-/workspace/helm/rag-api/app-secrets.yaml
+helm/rag-api/app-secrets.yaml
