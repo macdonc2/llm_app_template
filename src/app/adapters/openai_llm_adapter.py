@@ -1,15 +1,20 @@
+import asyncio
 from openai import OpenAI
 from ..ports.llm_port import LLMPort
-from ..config import settings
 
 class OpenAILLMAdapter(LLMPort):
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.client = OpenAI(api_key=self.api_key)
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+        self.client = OpenAI(api_key=api_key)
+        self.model  = model
 
     async def chat(self, prompt: str) -> str:
-        resp = await self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
+        loop = asyncio.get_running_loop()
+        # run the blocking .create() in a threadpool
+        resp = await loop.run_in_executor(
+            None,
+            lambda: self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+            )
         )
         return resp.choices[0].message.content

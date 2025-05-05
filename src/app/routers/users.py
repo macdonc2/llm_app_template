@@ -29,17 +29,20 @@ async def read_users_me(
 
 @router.patch("/me", response_model=UserRead)
 async def update_profile(
-    update: UserUpdate,
-    user_svc: UserService = Depends(get_user_service),
+    update:       UserUpdate,
+    user_svc:     UserService = Depends(get_user_service),
     current_user = Depends(get_current_user),
 ):
-    # Apply changes
-    if update.email:
-        current_user.email = update.email
-    if update.password:
-        current_user.hashed_password = hash_password(update.password)
-    if update.openai_api_key is not None:
-        current_user.openai_api_key = update.openai_api_key
+    # Build a dict of only the fields the client provided:
+    changes = update.model_dump(exclude_none=True)
 
-    updated = await user_svc.create_user(current_user)
+    # Apply each change dynamically:
+    if "password" in changes:
+        changes["hashed_password"] = hash_password(changes.pop("password"))
+
+    for field, value in changes.items():
+        setattr(current_user, field, value)
+
+    # Call your new update_user method (or upsert):
+    updated = await user_svc.update_user(current_user.id, update)
     return updated

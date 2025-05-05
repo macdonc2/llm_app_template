@@ -4,6 +4,7 @@ from datetime import timedelta
 class Settings(BaseSettings):
     database_url: str
     openai_api_key: str
+    tavily_base_url: str  
 
     secret_key: str
     algorithm: str = "HS256"

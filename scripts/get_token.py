@@ -1,10 +1,16 @@
+import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+PASSWORD = os.getenv("API_PSWD")
 
 url = "https://api.macdonml.com/token"
 data = {
     "grant_type": "password",
-    "username": "user@email.com",
-    "password": "Secretkey",
+    "username": "macdonc2@gmail.com",
+    "password": PASSWORD,
     "scope": ""
 }
 

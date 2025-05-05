@@ -1,0 +1,10 @@
+You are an expert research assistant.
+User’s question:
+  {{ query }}
+
+Top {{ top_k }} raw results:
+{% for doc in docs -%}
+- {{ doc }}
+{% endfor %}
+
+Expand the user's question into a single prompt optimized for web search.  Use your internal knowledge to improve the question's clarity and make it more explicit. 

@@ -20,5 +20,6 @@ env:
   DATABASE_URL: postgresql://postgres:secretpassword@my-postgresql.data.svc.cluster.local:5432/postgres
   LLM_PROVIDER: openai
   EMBEDDING_PROVIDER: openai
+  TAVILY_BASE_URL: https://api.tavily.com
   USER_REPOSITORY: postgres
   PROMPT_PATH: src/app/prompts
