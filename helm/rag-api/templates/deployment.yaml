@@ -50,8 +50,5 @@ spec:
               value: {{ .Values.env.USER_REPOSITORY | quote }}
             - name: PROMPT_PATH
               value: {{ .Values.env.PROMPT_PATH | quote }}
-
-          # OPTIONAL: If you want to inject all envs from the secret at once
-          # envFrom:
-          #   - secretRef:
-          #       name: rag-api-secret
+            - name: TAVILY_BASE_URL
+              value: {{ .Values.env.TAVILY_BASE_URL | quote }}

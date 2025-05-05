@@ -15,7 +15,7 @@ class PostgresUserRepository(UserRepositoryPort):
         salt = new_salt()
         user_id = generate_userid(user.email, salt)
         hashed_pw = hash_password(user.password)
-        db_user = User(id=user_id, email=user.email, salt=salt, hashed_password=hashed_pw, openai_api_key=user.open_ai_api_key)
+        db_user = User(id=user_id, email=user.email, salt=salt, hashed_password=hashed_pw, openai_api_key=user.openai_api_key)
         self.db.add(db_user)
         try:
             await self.db.commit()
@@ -28,3 +28,18 @@ class PostgresUserRepository(UserRepositoryPort):
     async def get_user_by_email(self, email: str) -> User | None:
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
+    
+    async def get_by_id(self, user_id: str) -> User | None:
+        result = await self.db.execute(
+            select(User).where(User.id == user_id)
+        )
+        return result.scalar_one_or_none()
+    
+    async def update(self, user: User) -> User:
+        # assume `user` is already attached to session
+        self.db.add(user)
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+    
+

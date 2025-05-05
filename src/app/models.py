@@ -13,3 +13,4 @@ class User(Base):
     hashed_password = sa.Column(sa.String, nullable=False)
     created_at = sa.Column(sa.DateTime, default=datetime.utcnow, nullable=False)
     openai_api_key = sa.Column(sa.String(255), nullable=True)
+    tavily_api_key = sa.Column(sa.String, nullable=True)
