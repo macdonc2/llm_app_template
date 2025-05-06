@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    container_name: local-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+
+  rag-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file: .env
+    depends_on:
+      - db
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80
+    ports:
+      - "8000:80"
+    environment:
+      DATABASE_URL: postgresql://postgres:secretpassword@db:5432/postgres
+    networks:
+      - backend
+
+  dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.kube:/root/.kube
+      - ~/.azure:/root/.azure
+    environment:
+      KUBECONFIG: /root/.kube/config
+    command: sleep infinity
+    depends_on:
+      - rag-api
+    stdin_open: true
+    tty: true
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  backend:

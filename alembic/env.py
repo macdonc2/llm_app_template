@@ -5,6 +5,15 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in the project root
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+
+# Optional: raise error if DATABASE_URL is still not set
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL environment variable is not set")
+
 # 1) Ensure Alembic can import your “app” package under /app/src
 sys.path.insert(
     0,

@@ -5,14 +5,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 openai_key = os.getenv("OPENAI_API_KEY")
+PASSWORD = os.getenv("USER_PASSWORD")
 
-url = "https://api.macdonml.com/users/"
+# url = "https://api.macdonml.com/users/"
+url = "http://rag-api/users/"
 headers = {
     "Content-Type": "application/json"
 }
 data = {
     "email": "macdonc2@gmail.com",
-    "password": "Guitar0120!",
+    "password": PASSWORD,
     "openai_api_key": openai_key
 }
 
