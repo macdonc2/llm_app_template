@@ -35,6 +35,11 @@ class SummarizeRequest(BaseModel):
     query: str
     top_k: int = 5
 
+class ContextItem(BaseModel):
+    title: str
+    url: str
+    raw_content: Optional[str] = None
+
 class SummarizeResponse(BaseModel):
     summary: str
-    contexts: List[str]
+    contexts: List[ContextItem]

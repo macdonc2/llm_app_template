@@ -1,24 +1,30 @@
 {
-    "name": "Python Dev Container",
-    "build": {
-      "dockerfile": "Dockerfile",
-       "context": ".."
-    },
-    "settings": {
-      "terminal.integrated.defaultProfile.linux": "bash"
-    },
-    "extensions": [
-      "ms-python.python"
-    ],
-    "postCreateCommand": "apt-get update && apt-get install -y docker.io && pip install -r requirements.txt",
-    "remoteUser": "root",
-    "mounts": [
-      "source=${localWorkspaceFolder},target=/workspace,type=bind",
-      "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-    ],
-    "workspaceFolder": "/workspace",
-    "runArgs": [
-      "--dns", "8.8.8.8",
-      "--dns", "1.1.1.1"
-    ]
-  }
+  "name": "Python Dev Container",
+  "service": "dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "extensions": [
+    "ms-python.python"
+  ],
+  "postCreateCommand": "apt-get update && apt-get install -y docker.io && pip install -r requirements.txt",
+  "remoteUser": "root",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind",
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=/Users/codymacdonald/.kube,target=/root/.kube,type=bind",
+    "source=/Users/codymacdonald/.azure,target=/root/.azure,type=bind"
+  ],
+  "remoteEnv": {
+    "KUBECONFIG": "/root/.kube/config"
+  },
+  "workspaceFolder": "/workspace",
+  "runArgs": [
+    "--dns", "8.8.8.8",
+    "--dns", "1.1.1.1"
+  ]
+}

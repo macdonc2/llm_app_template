@@ -4,17 +4,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PASSWORD = os.getenv("API_PSWD")
+PASSWORD = os.getenv("USER_PASSWORD")
 
-url = "https://api.macdonml.com/token"
+url = "http://rag-api/token"
 data = {
-    "grant_type": "password",
     "username": "macdonc2@gmail.com",
     "password": PASSWORD,
+    "grant_type": "password",
     "scope": ""
 }
 
-response = requests.post(url, data=data)
+headers = {
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
+response = requests.post(url, data=data, headers=headers)
 
 if response.ok:
     token = response.json().get("access_token")
