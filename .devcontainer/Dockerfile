@@ -34,3 +34,9 @@ RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Set working directory
 WORKDIR /workspace
+
+# Copy only requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt

@@ -13,7 +13,7 @@ class TavilySearchAdapter(TavilySearchPort):
     async def search(self, query: str, top_k: int = 5) -> List[str]:
         resp = await self.client.post(
             "/search",
-            json={"query": query, "top_k": top_k},
+            json={"query": query, "max_results": top_k},
         )
         resp.raise_for_status()
         return resp.json().get("results", [])

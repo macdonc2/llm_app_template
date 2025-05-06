@@ -49,11 +49,6 @@ headers = {
     "Content-Type":  "application/json",
 }
 
-# If you need to send your API keys alongside the request (rare), you can include them here:
-# but normally your service pulls the Tavily key from the current_user object.
-# headers["X-OPENAI-KEY"]  = OPENAI_KEY
-# headers["X-TAVILY-KEY"]  = TAVILY_KEY
-
 resp = requests.post(
     f"{API_BASE}/tavily/summarize",
     headers=headers,

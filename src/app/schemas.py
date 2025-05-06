@@ -42,4 +42,5 @@ class ContextItem(BaseModel):
 
 class SummarizeResponse(BaseModel):
     summary: str
+    expanded_query: str
     contexts: List[ContextItem]
