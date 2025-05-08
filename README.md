@@ -1,5 +1,12 @@
 # RAG + Auth API
 
+## Deepwiki
+Learn interactively with the codebase using Deepwiki!
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/macdonc2/llm_app_template)
+
+
+
 ## Overview
 
 This repository provides a FastAPI service supporting:
