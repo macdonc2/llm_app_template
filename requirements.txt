@@ -17,3 +17,5 @@ httpx
 transformers
 requests
 python-dotenv
+fastmcp
+openai-agents

@@ -9,8 +9,6 @@ load_dotenv()
 API_BASE   = os.getenv("API_BASE_URL", "https://api.macdonml.com")
 EMAIL      = os.getenv("USER_EMAIL")
 PASSWORD   = os.getenv("USER_PASSWORD")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-TAVILY_KEY = os.getenv("TAVILY_API_KEY")
 
 # You can override these to test different queries without changing the script:
 QUERY  = os.getenv("TAVILY_QUERY", "latest AI news")  
