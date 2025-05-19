@@ -12,10 +12,10 @@ pydantic[email]
 python-multipart
 alembic
 psycopg2-binary>=2.9
-jinja2 
 httpx 
 transformers
 requests
 python-dotenv
 fastmcp
 openai-agents
+Jinja2>=3.0.0

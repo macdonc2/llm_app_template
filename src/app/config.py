@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     user_salt: str
 
+    prompt_path: str = "src/app/prompts"
+
     llm_provider: str = "openai"
     embedding_provider: str = "openai"
     user_repository: str = "postgres"

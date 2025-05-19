@@ -1,6 +1,8 @@
+imagePullSecrets:
+  - name: acr-pull-secret
 image:
   repository: macdoncml.azurecr.io/rag-api
-  tag: latest
+  tag: v2
   pullPolicy: Always
 
 service:

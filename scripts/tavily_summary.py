@@ -4,7 +4,7 @@ import requests
 from dotenv import load_dotenv
 from requests.exceptions import JSONDecodeError
 
-load_dotenv()
+load_dotenv(override=True)
 
 API_BASE   = os.getenv("API_BASE_URL", "https://api.macdonml.com")
 EMAIL      = os.getenv("USER_EMAIL")

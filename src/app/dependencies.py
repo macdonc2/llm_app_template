@@ -1,7 +1,9 @@
 import os
+import traceback
 from typing import List
-from jinja2 import Environment, FileSystemLoader
+
 from fastapi import Depends, HTTPException, status
+from jinja2 import Environment, FileSystemLoader
 
 from app.config                            import settings
 from app.db                                import get_db
@@ -20,9 +22,9 @@ from app.services.user_service             import UserService
 from app.services.llm_service              import LLMService
 from app.services.tavily_summarize_service import TavilySummaryService
 
-from app.ports.agent_port                  import AgentPort
-from app.adapters.agents_adapter           import AgentsAdapter
-from app.services.agent_service            import AgentService
+from app.ports.agent_port      import AgentPort
+from app.adapters.agents_adapter import AgentsAdapter
+from app.services.agent_service import AgentService
 
 
 def get_llm_provider(
@@ -72,7 +74,10 @@ def get_user_service(
 
 def get_prompt_env() -> Environment:
     templates_dir = os.path.join(os.path.dirname(__file__), "prompts")
-    return Environment(loader=FileSystemLoader(templates_dir))
+    return Environment(
+        loader=FileSystemLoader(templates_dir),
+        autoescape=False,
+    )
 
 
 def get_tavily_adapter(
@@ -97,24 +102,19 @@ def get_tavily_summary_service(
 
 
 async def get_agent_adapter(
-    current_user: User = Depends(get_current_user)
+    current_user: User     = Depends(get_current_user),
+    env: Environment       = Depends(get_prompt_env),
 ) -> AgentPort:
-    """
-    Builds an AgentsAdapter that wraps:
-      - the user’s OpenAI key
-      - a list of MCPServerSse tool clients for each provider in settings.tool_providers
-    """
-    # 1) Determine the user’s OpenAI API key (per-user or global)
-    api_key = current_user.openai_api_key or settings.openai_api_key
+    api_key = current_user.openai_api_key
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No OpenAI API key available for agent."
         )
 
-    # 2) Instantiate and connect each MCPServerSse client
-    mcp_servers: List[object] = []
-    for key in settings.tool_providers:  # e.g. ["calculator","web_search","rag"]
+    # 1) Build tool clients
+    mcp_servers = []
+    for key in settings.tool_providers:
         factory = TOOL_PROVIDERS.get(key)
         if not factory:
             raise HTTPException(
@@ -122,25 +122,31 @@ async def get_agent_adapter(
                 detail=f"Unknown tool provider '{key}'"
             )
         mcp = factory(settings)
-        # ensure the SSE stream is opened before use
+
+        # 2) Connect if needed
         if hasattr(mcp, "connect"):
             try:
                 await mcp.connect()
             except Exception as e:
+                tb = traceback.format_exc()
+                print(f"Failed to connect to tool '{key}':\n{tb}")
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail=f"Could not connect to tool '{key}': {e}"
                 )
         mcp_servers.append(mcp)
 
-    # 3) Return the unified AgentsAdapter
+    # 3) Render your agent instructions from Jinja2
+    template = env.get_template("agent_instructions.jinja2")
+    instructions = template.render(
+        tool_providers=settings.tool_providers,
+    )
+
+    # 4) Return the unified adapter
     return AgentsAdapter(
         openai_api_key=api_key,
-        mcp_servers=mcp_servers,  # match AgentsAdapter.__init__
-        instructions=(
-            "You have access to multiple tools: calculator, web search, RAG, etc. "
-            "Invoke them when needed; otherwise answer directly."
-        )
+        mcp_servers=mcp_servers,
+        instructions=instructions,
     )
 
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from app.services.agent_service import AgentService
 from app.dependencies import get_agent_service
@@ -11,9 +11,17 @@ async def ask(
     req: AgentRequest,
     svc: AgentService = Depends(get_agent_service),
 ):
-    """
-    Endpoint that accepts a natural‐language query, invokes the Agent,
-    and returns its response (using tools as needed).
-    """
-    output = await svc.ask(req.query)
-    return AgentResponse(response=output)
+
+    try:
+        output = await svc.ask(req.query)
+        return AgentResponse(response=output)
+    except HTTPException:
+        # re-raise any HTTPException you intentionally threw in DI or service
+        raise
+    except Exception as e:
+        # catch anything unexpected and give a 503 with a useful message
+        # (you could also log.exception(e) here)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Agent failed with error: {e}"
+        )

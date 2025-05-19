@@ -1,4 +1,3 @@
-# helm/rag-api/templates/alembic-job.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -6,11 +5,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": pre-upgrade,pre-install
-    # "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
 spec:
   backoffLimit: 0
   template:
     spec:
+      # ← six spaces under spec.template
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
       restartPolicy: OnFailure
       containers:
         - name: migrate
