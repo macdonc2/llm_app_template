@@ -3,7 +3,6 @@ from datetime import timedelta
 
 class Settings(BaseSettings):
     database_url: str
-    openai_api_key: str
     tavily_base_url: str  
 
     secret_key: str
@@ -12,9 +11,14 @@ class Settings(BaseSettings):
 
     user_salt: str
 
+    prompt_path: str = "src/app/prompts"
+
     llm_provider: str = "openai"
     embedding_provider: str = "openai"
     user_repository: str = "postgres"
+
+    mcp_base_url: str = "https://api.macdonml.com"
+    tool_providers: list[str] = ["calculator"]
 
     class Config:
         env_file = ".env"

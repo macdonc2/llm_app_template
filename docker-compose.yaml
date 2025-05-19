@@ -15,6 +15,13 @@ services:
     networks:
       - backend
 
+  calculator:
+    image: macdoncml.azurecr.io/fastmcp-calculator:latest
+    expose:
+      - "8001"        
+    networks:
+      - backend
+
   rag-api:
     build:
       context: .
@@ -22,11 +29,13 @@ services:
     env_file: .env
     depends_on:
       - db
+      - calculator
+    environment:
+      DATABASE_URL: postgresql://postgres:secretpassword@db:5432/postgres
+      MCP_BASE_URL: http://calculator:8001
     command: uvicorn app.main:app --host 0.0.0.0 --port 80
     ports:
       - "8000:80"
-    environment:
-      DATABASE_URL: postgresql://postgres:secretpassword@db:5432/postgres
     networks:
       - backend
 

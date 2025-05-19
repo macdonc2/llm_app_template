@@ -8,22 +8,23 @@ metadata:
 spec:
   tls:
     - hosts:
-{{- range .Values.ingress.hosts }}
-        - {{ .host | quote }}
-{{- end }}
+        - api.macdonml.com
       secretName: "rag-api-tls"
   rules:
-{{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    - host: api.macdonml.com
       http:
         paths:
-{{- range .paths }}
-          - path: {{ .path | quote }}
-            pathType: {{ .pathType | default "Prefix" | quote }}
+          - path: /token
+            pathType: Prefix
             backend:
               service:
                 name: rag-api
                 port:
-                  number: {{ $.Values.service.port }}
-{{- end }}
-{{- end }}
+                  number: {{ .Values.service.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rag-api
+                port:
+                  number: {{ .Values.service.port }}
