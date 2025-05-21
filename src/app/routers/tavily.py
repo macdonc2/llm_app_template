@@ -1,15 +1,20 @@
-# base_app/src/app/routers/tavily.py
-
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from typing import List
 
 from app.dependencies import get_tavily_adapter, get_tavily_summary_service
-from app.ports.tavily_search_port  import TavilySearchPort
-from app.schemas import ContextItem, SummarizeRequest, SummarizeResponse
+from app.ports.tavily_search_port import TavilySearchPort
 from app.services.tavily_summarize_service import TavilySummaryService
+from app.schemas import ContextItem, SummarizeRequest, SummarizeResponse
+from app.auth.router import fastapi_users
 
-router = APIRouter(prefix="/tavily", tags=["tavily"])
+current_active_user = fastapi_users.current_user(active=True, verified=True)
+
+router = APIRouter(
+    prefix="/tavily",
+    tags=["tavily"],
+    dependencies=[Depends(current_active_user)],
+)
+
 
 @router.post("/summarize", response_model=SummarizeResponse)
 async def tavily_summarize(
@@ -17,21 +22,30 @@ async def tavily_summarize(
     adapter: TavilySearchPort = Depends(get_tavily_adapter),
     summarizer: TavilySummaryService = Depends(get_tavily_summary_service),
 ):
+    """
+    Generate a summary of search results for a user query.
+
+    Expands the user's query, performs a search, and then summarizes the results.
+
+    Args:
+        req (SummarizeRequest): The request containing the query and search preferences.
+        adapter (TavilySearchPort): The adapter used to perform the search.
+        summarizer (TavilySummaryService): The service used to expand and summarize the query results.
+
+    Returns:
+        SummarizeResponse: A response containing the summary, expanded query, and context items.
+    """
     
-    # 1) Expand query
-    expanded_query: str = await summarizer.expand_query(query=req.query)
+    expanded_query = await summarizer.expand_query(query=req.query)
+    raw = await adapter.search(query=expanded_query, top_k=req.top_k)
+    contexts: List[ContextItem] = [ContextItem(**ctx) for ctx in raw]
 
-    # 2) Fetch raw docs
-    contexts: List[ContextItem] = [ContextItem(**ctx) for ctx in await adapter.search(query=expanded_query, top_k=req.top_k)]
-    print(f"top_k: {req.top_k}")
-    print(f"len_contexts: {len(contexts)}")
-
-    # 3) Summarize them
-    summary_text: str = await summarizer.summarize(req.query, [c.raw_content or "" for c in contexts])
+    summary_text = await summarizer.summarize(
+        req.query, [c.raw_content or "" for c in contexts]
+    )
 
     return SummarizeResponse(
-    summary=summary_text,
-    expanded_query=expanded_query,
-    contexts=contexts
-)
-
+        summary=summary_text,
+        expanded_query=expanded_query,
+        contexts=contexts,
+    )

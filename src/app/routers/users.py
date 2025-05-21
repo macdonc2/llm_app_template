@@ -11,6 +11,23 @@ async def register_user(
     user_in: UserCreate,
     user_svc: UserService = Depends(get_user_service),
 ):
+    """
+    Register a new user if the email address is not already taken.
+
+    Checks for an existing user with the provided email and, if not found,
+    delegates user creation to the user service.
+
+    Args:
+        user_in (UserCreate): The information required to create a new user.
+        user_svc (UserService): Dependency-injected user service for user operations.
+
+    Returns:
+        UserRead: The newly created user record.
+
+    Raises:
+        HTTPException: If the email is already registered.
+    """
+
     # Optionally check for existing:
     if await user_svc.get_user_by_email(user_in.email):
         raise HTTPException(
@@ -25,6 +42,16 @@ async def register_user(
 async def read_users_me(
     current_user = Depends(get_current_user),
 ):
+    """
+    Retrieve the profile information for the currently authenticated user.
+
+    Args:
+        current_user: The currently authenticated user, provided via dependency injection.
+
+    Returns:
+        UserRead: The user record of the authenticated user.
+    """
+
     return current_user
 
 @router.patch("/me", response_model=UserRead)
@@ -33,6 +60,21 @@ async def update_profile(
     user_svc:     UserService = Depends(get_user_service),
     current_user = Depends(get_current_user),
 ):
+    """
+    Update the profile information of the currently authenticated user.
+
+    Applies changes provided by the client, including secure password hashing
+    if a new password is submitted, and updates the user's record.
+
+    Args:
+        update (UserUpdate): The user-provided fields to update.
+        user_svc (UserService): Dependency-injected user service.
+        current_user: The currently authenticated user.
+
+    Returns:
+        UserRead: The updated user record.
+    """
+    
     # Build a dict of only the fields the client provided:
     changes = update.model_dump(exclude_none=True)
 

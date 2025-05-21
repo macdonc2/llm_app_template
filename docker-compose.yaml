@@ -17,15 +17,18 @@ services:
 
   calculator:
     image: macdoncml.azurecr.io/fastmcp-calculator:latest
+    platform: linux/amd64
     expose:
-      - "8001"        
+      - "8001"
     networks:
       - backend
 
-  rag-api:
+  web:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    volumes:
+      - ./src:/app/src           
     env_file: .env
     depends_on:
       - db
@@ -33,13 +36,15 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:secretpassword@db:5432/postgres
       MCP_BASE_URL: http://calculator:8001
-    command: uvicorn app.main:app --host 0.0.0.0 --port 80
+      PYTHONPATH: /app/src       
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 80
     ports:
       - "8000:80"
     networks:
       - backend
 
   dev:
+    # helper container just for shell / kubectl / helm / az
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
@@ -48,11 +53,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.kube:/root/.kube
       - ~/.azure:/root/.azure
+    working_dir: /workspace
     environment:
       KUBECONFIG: /root/.kube/config
+      PYTHONPATH: /workspace/src
     command: sleep infinity
-    depends_on:
-      - rag-api
     stdin_open: true
     tty: true
     networks:

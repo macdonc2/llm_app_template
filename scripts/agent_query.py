@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import os
 import sys
 import requests
@@ -8,10 +7,10 @@ from requests.exceptions import JSONDecodeError
 # Load .env
 load_dotenv(override=True)
 
-API_BASE = os.getenv("API_BASE_URL",    "https://api.macdonml.com")
+API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000")
 EMAIL    = os.getenv("USER_EMAIL")
 PASSWORD = os.getenv("USER_PASSWORD")
-QUERY    = os.getenv("AGENT_QUERY",     "What is 2 + 2?")
+QUERY    = os.getenv("AGENT_QUERY", "What is 2 + 2?")
 
 if not EMAIL or not PASSWORD:
     print("❌ Set USER_EMAIL and USER_PASSWORD in .env", file=sys.stderr)
@@ -19,9 +18,9 @@ if not EMAIL or not PASSWORD:
 
 # 1) Get JWT
 login = requests.post(
-    f"{API_BASE}/token",
-    data={"username":EMAIL,"password":PASSWORD,"grant_type":"password","scope":""},
-    headers={"Content-Type":"application/x-www-form-urlencoded"}
+    f"{API_BASE}/auth/jwt/login",
+    data={"username": EMAIL, "password": PASSWORD},
+    headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
 )
 print("LOGIN ➤", login.status_code)
 try:
@@ -42,7 +41,8 @@ resp = requests.post(
     headers={
         "Authorization": f"Bearer {token}",
         "Content-Type":  "application/json",
-    }
+        "Accept":        "application/json",
+    },
 )
 print("AGENT ➤", resp.status_code)
 try:
