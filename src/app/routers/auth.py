@@ -1,20 +1,62 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
-from ..dependencies import get_user_repository
-from ..security import verify_password, create_access_token, settings
-from ..schemas import Token
+import uuid
+from fastapi import APIRouter
+from fastapi_users import FastAPIUsers
+from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
 
-router = APIRouter(tags=["auth"])
+from app.db.user import get_user_db
+from app.models import User
+from app.schemas import UserCreate, UserRead, UserUpdate
+from app.config import settings
 
-@router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), repo=Depends(get_user_repository)):
-    user = await repo.get_user_by_email(form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(data={"sub": user.id}, expires_delta=timedelta(minutes=settings.access_token_expire_minutes))
-    return {"access_token": access_token}
+router = APIRouter()
+
+# How the token is transported
+bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+
+# JWT strategy
+def get_jwt_strategy() -> JWTStrategy:
+    return JWTStrategy(secret=settings.SECRET_KEY, lifetime_seconds=3600)
+
+# Authentication backend
+auth_backend = AuthenticationBackend(
+    name="jwt",
+    transport=bearer_transport,
+    get_strategy=get_jwt_strategy,
+)
+
+# FastAPI-Users instance
+fastapi_users = FastAPIUsers[User, uuid.UUID](
+    get_user_db,
+    [auth_backend],
+    User,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
+
+# Mount the built-in FastAPI-Users routers
+router.include_router(
+    fastapi_users.get_register_router(UserCreate, UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+router.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+router.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    tags=["auth"],
+)
+router.include_router(
+    fastapi_users.get_reset_password_router(),
+    prefix="/auth",
+    tags=["auth"],
+)
+router.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/users",
+    tags=["users"],
+)
