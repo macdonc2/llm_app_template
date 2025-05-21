@@ -19,3 +19,5 @@ python-dotenv
 fastmcp
 openai-agents
 Jinja2>=3.0.0
+fastapi-users[sqlalchemy]
+fastapi-mail
