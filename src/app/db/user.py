@@ -1,4 +1,3 @@
-# src/app/db/user.py
 from fastapi import Depends
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +17,6 @@ async def get_user_db(
     Yields:
         SQLAlchemyUserDatabase: User database instance configured with the provided session and User model.
     """
-    
+
     # session first, model second
     yield SQLAlchemyUserDatabase(session, User)
