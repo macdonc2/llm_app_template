@@ -42,7 +42,17 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline():
-    """Run migrations in 'offline' mode (no DB connection)."""
+    """
+    Run Alembic database migrations in 'offline' mode.
+
+    Retrieves the database URL from the configuration and configures the Alembic
+    context for offline migration (without a live database connection).
+    Executes migrations in a transactional context.
+
+    Returns:
+        None
+    """
+
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -55,7 +65,18 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    """Run migrations in 'online' mode (with a live DB connection)."""
+    """
+    Run Alembic database migrations in 'online' mode.
+
+    Establishes a database connection using the configuration settings and
+    configures the Alembic context for online migrations. Runs migrations
+    within a transaction, allowing automatic schema updates while connected
+    to the database.
+
+    Returns:
+        None
+    """
+    
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
