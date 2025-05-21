@@ -1,228 +1,508 @@
-# RAG + Auth API
+# LLM App Template
 
-## Deepwiki
-Learn interactively with the codebase using Deepwiki!
+A comprehensive, beginner-to-expert guide for understanding, running, deploying, and extending the LLM App Template. This template demonstrates best practices in API design, tool orchestration via MCP servers, database migrations, containerization, and cloud-native deployment with Helm on Azure AKS. This guide includes detailed explanations, real-world analogies, code examples, dependency lists, and troubleshooting tips.
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/macdonc2/llm_app_template)
+---
 
+## Table of Contents
 
+1. [Overview](#overview)  
+2. [Architecture & Programming Patterns](#architecture--programming-patterns)  
+   - Dependency Injection (DI)  
+   - Service Registry  
+   - Ports & Adapters  
+3. [Setup & Dependencies](#setup--dependencies)  
+4. [Database Migrations with Alembic](#database-migrations-with-alembic)  
+5. [Docker Compose & Local Development](#docker-compose--local-development)  
+6. [Specialized Routes & MCP Integration](#specialized-routes--mcp-integration)  
+7. [Helm Charts & AKS Deployment](#helm-charts--aks-deployment)  
+8. [Extending the Application](#extending-the-application)  
+9. [Troubleshooting Tips & Tricks](#troubleshooting-tips--tricks)  
+10. [Contributing](#contributing)  
+
+---
 
 ## Overview
 
-This repository provides a FastAPI service supporting:
+Welcome, developer! This template bundles a full-stack microservice architecture:
 
-- User registration & JWT-based authentication
-- Retrieval-Augmented Generation (RAG) endpoint powered by OpenAI
-- Clean architecture with Dependency Injection, Registry, Ports & Adapters, Services, and Routers
-- Asynchronous PostgreSQL access via SQLAlchemy and Alembic migrations
-- Dockerized build & VS Code Dev Container setup
-- Kubernetes deployment on Azure AKS using Helm charts
+- **FastAPI** for RESTful HTTP endpoints  
+- **gRPC/SSE-based Agent** for orchestrating tool calls (MCP servers)  
+- **SQLAlchemy & Alembic** for ORM and database version control  
+- **Docker Compose** for local multi-container setups  
+- **Helm & Azure AKS** for production-grade Kubernetes deployments  
+
+We start with core concepts, reinforce with analogies, dive into setup, then deploy to Azure. By the end, you'll understand the “why” behind each pattern and the “how” to extend and troubleshoot effectively.
 
 ---
 
-## Repository Structure
+## Architecture & Programming Patterns
 
-```text
-base_app/
-├── .devcontainer/                # VS Code Remote Container config
-│   ├── devcontainer.json
-│   └── Dockerfile
-├── .env                          # Environment variables (credentials & settings)
-├── alembic.ini                   # Alembic configuration
-├── alembic/                      # Database migrations
-│   ├── env.py
-│   └── versions/
-│       ├── .empty
-│       ├── 20250429_create_users_table.py
-│       └── 20250429_add_openai_key.py
-├── docker/                       # Production Docker image
-│   └── Dockerfile
-├── helm/                         # Helm charts for Kubernetes deployment
-│   ├── cert-infra/               # cert-manager ClusterIssuer chart
-│   │   ├── Chart.yaml
-│   │   └── templates/
-│   │       └── cluster-issuer-macdonml.yaml
-│   └── rag-api/                  # RAG API application chart
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       ├── app-secrets.yaml      # Kubernetes Secret manifest template
-│       └── templates/
-│           ├── alembic-job.yaml
-│           ├── deployment.yaml
-│           ├── ingress.yaml
-│           └── service.yaml
-├── requirements.txt              # Python dependencies
-└── src/
-    └── app/                     # Application source code
-        ├── main.py              # FastAPI app entrypoint
-        ├── config.py            # Pydantic Settings for env vars
-        ├── db.py                # SQLAlchemy Async engine & session
-        ├── dependencies.py      # FastAPI dependency providers
-        ├── registry.py          # Maps provider names to adapter classes
-        ├── models.py            # SQLAlchemy ORM models
-        ├── schemas.py           # Pydantic schemas for I/O
-        ├── security.py          # JWT auth & password hashing
-        ├── utils.py             # Helper functions (salt, ID generation)
-        ├── adapters/            # Infrastructure implementations
-        │   ├── openai_llm_adapter.py
-        │   ├── openai_embedding_adapter.py
-        │   └── postgres_user_repository.py
-        ├── ports/               # Abstract base classes (Ports)
-        │   ├── llm_port.py
-        │   ├── embedding_port.py
-        │   └── user_repository_port.py
-        ├── services/            # Business logic
-        │   ├── user_service.py
-        │   ├── llm_service.py
-        │   └── retrieval_service.py
-        └── routers/             # HTTP endpoints
-            ├── auth.py          # /token
-            ├── users.py         # /users and /users/me
-            └── rag.py           # /rag/query
+### 1. Dependency Injection (DI)
+
+**Concept:** Injecting a component’s dependencies at runtime rather than hardcoding them.
+
+**Analogy:**  
+Imagine a power strip with multiple outlets. Instead of building different chargers directly into your power supply, you plug in any device’s charger as needed. The power strip doesn’t care what you plug in—it just provides electricity.
+
+**Why DI?**  
+- **Loose Coupling:** Services don’t instantiate their dependencies; they receive them externally.  
+- **Testability:** Swap real services with mocks or fakes easily.  
+- **Flexibility:** Change implementations without altering business logic.
+
+**Example:**
+```python
+# Define a user repository interface (abstract)
+class UserRepository:
+    def get_user(self, user_id: str) -> User:
+        raise NotImplementedError
+
+# Concrete implementation using SQLAlchemy
+class SqlUserRepository(UserRepository):
+    def __init__(self, session):
+        self.session = session
+
+    def get_user(self, user_id: str) -> User:
+        return self.session.query(UserModel).get(user_id)
+
+# Service that depends on the repository
+class UserService:
+    def __init__(self, user_repo: UserRepository):
+        self.user_repo = user_repo
+
+    def fetch_user_profile(self, user_id: str) -> UserProfile:
+        user = self.user_repo.get_user(user_id)
+        return UserProfile.from_model(user)
+
+# At application startup
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
+db_session = SessionLocal()
+
+# Injecting the SQL repository into the service
+user_service = UserService(user_repo=SqlUserRepository(db_session))
 ```
 
----
-
-## Concepts & Patterns
-
-### Dependency Injection
-- Implemented in `src/app/dependencies.py` with FastAPI's `Depends()`.
-- Provides decoupled constructors for core components (DB, services, providers).
-
-### Registry
-- `src/app/registry.py` defines mappings:
-  - **LLM_PROVIDERS**: e.g. OpenAILLMAdapter
-  - **EMBEDDING_PROVIDERS**: e.g. OpenAIEmbeddingAdapter
-  - **USER_REPOSITORY_PROVIDERS**: e.g. PostgresUserRepository
-
-### Ports & Adapters
-- **Ports** (`src/app/ports/`): abstract interfaces:
-  - `LLMPort` for chat completions
-  - `EmbeddingPort` for vector embeddings
-  - `UserRepositoryPort` for user persistence
-- **Adapters** (`src/app/adapters/`): concrete implementations:
-  - `OpenAILLMAdapter` (uses OpenAI SDK)
-  - `OpenAIEmbeddingAdapter` (uses OpenAI SDK)
-  - `PostgresUserRepository` (SQLAlchemy + AsyncSession)
-
-### Services
-- Business logic lives in `src/app/services/`:
-  - `UserService`: handles user creation & lookup
-  - `LLMService`: wraps LLM chat interactions
-  - `RetrievalService`: embeds queries & fetches relevant docs for RAG
-
-### Routers (Routes)
-- FastAPI routers in `src/app/routers/`:
-  - **`auth.py`**: `/token` endpoint issues JWTs
-  - **`users.py`**: `/users` registration, `/users/me` profile
-  - **`rag.py`**: `/rag/query` for Retrieval-Augmented Generation
-
-### Schemas & Models
-- **Schemas** (`src/app/schemas.py`): Pydantic models for request/response validation
-- **Models** (`src/app/models.py`): SQLAlchemy ORM definitions (e.g. `User` table)
+**Usage Guidance:**  
+- Define interfaces or abstract base classes for dependencies.  
+- Instantiate and wire dependencies in a single *composition root* (e.g., FastAPI startup event).  
+- Avoid `import`ing concrete implementations within business logic.
 
 ---
 
-## Configuration
+### 2. Service Registry
 
-- Environment variables are loaded by Pydantic `BaseSettings` in `config.py` via the `.env` file.
-- Required vars:
-  - `DATABASE_URL`
-  - `OPENAI_API_KEY`
-  - `SECRET_KEY`
-  - `USER_SALT`
-  - (Optionally) `LLM_PROVIDER`, `EMBEDDING_PROVIDER`, `USER_REPOSITORY`
+**Concept:** A centralized lookup for services used across the application.
 
-Copy `.env` to set your local credentials before running.
+**Analogy:**  
+Think of a hotel concierge desk. Guests ask the concierge for services (taxis, tours, room service). The desk maintains a directory and forwards your request to the appropriate vendor.
+
+**Why Registry?**  
+- **Global Access Point:** Retrieve services anywhere without deep import chains.  
+- **Late Binding:** Register services after instantiation, enabling dynamic plugins.  
+- **Circular Import Avoidance:** No need to import modules in each other.
+
+**Example:**
+```python
+class ServiceRegistry:
+    _services: dict[str, object] = {}
+
+    @classmethod
+    def register(cls, name: str, service: object) -> None:
+        cls._services[name] = service
+
+    @classmethod
+    def get(cls, name: str) -> object:
+        if name not in cls._services:
+            raise KeyError(f"Service '{name}' not found.")
+        return cls._services[name]
+
+# Registering services at startup
+ServiceRegistry.register("user_service", user_service)
+ServiceRegistry.register("search_service", SearchService())
+
+# Retrieving elsewhere
+search_svc = ServiceRegistry.get("search_service")
+results = search_svc.search("query terms")
+```
+
+**Usage Guidance:**  
+- Register exactly once, ideally in the main application entrypoint.  
+- Clear or override registrations in tests to control dependencies.  
+- Use descriptive keys to avoid confusion.
 
 ---
 
-## Local Development & Docker
+### 3. Ports & Adapters (Hexagonal Architecture)
 
-1. **Environment**: Duplicate `.env` with real values.
-2. **Docker Build**:
-   ```bash
-   docker build -t rag-api:local -f docker/Dockerfile .
-   ```
-3. **Run Container**:
-   ```bash
-   docker run --env-file .env -p 80:80 rag-api:local
-   ```
-4. **VS Code Dev Container**: Open `base_app` folder in VS Code and reopen in container (uses `.devcontainer`).
+**Concept:** Define *ports* (interfaces) for your core domain logic and *adapters* (implementations) for external systems.
+
+**Analogy:**  
+Electrical outlets (ports) follow standard shapes. You may have different plugs (adapters) for various countries, but the outlet interface stays the same.
+
+**Why Ports & Adapters?**  
+- **Decoupling:** Core domain code knows nothing about external details.  
+- **Swappability:** Replace or mock external systems without touching business logic.  
+- **Testability:** Adapters are easily faked in unit tests.
+
+**Example:**
+```python
+# Domain port (interface)
+class NotificationPort(ABC):
+    @abstractmethod
+    def send(self, recipient: str, message: str) -> None:
+        pass
+
+# SMTP adapter
+class SmtpNotificationAdapter(NotificationPort):
+    def __init__(self, smtp_client):
+        self.smtp = smtp_client
+
+    def send(self, recipient: str, message: str) -> None:
+        self.smtp.send_email(to=recipient, body=message)
+
+# SMS adapter
+class SmsNotificationAdapter(NotificationPort):
+    def __init__(self, sms_client):
+        self.sms = sms_client
+
+    def send(self, recipient: str, message: str) -> None:
+        self.sms.send_text(to=recipient, text=message)
+
+# Business logic uses only the port
+def notify_user(port: NotificationPort, user_email: str, text: str):
+    port.send(user_email, text)
+
+# Wiring at startup
+smtp_adapter = SmtpNotificationAdapter(smtp_client)
+ServiceRegistry.register("notifier", smtp_adapter)
+```
+
+**Usage Guidance:**  
+- Keep port interfaces minimal and focused on domain needs.  
+- Place ports in a `ports/` or `domain/ports/` folder.  
+- Adapters live under `adapters/` with clear naming (e.g., `adapters/smtp.py`).
+
+---
+
+## Setup & Dependencies
+
+**Required Versions & Tools:**
+- **Python:** 3.11 or higher  
+- **PostgreSQL:** 15.x  
+- **Docker & Docker Compose:** v20+  
+- **Helm:** 3.x  
+- **Azure CLI:** 2.0+ with `aks-preview` extension  
+- **kubectl:** v1.25+
+
+**Repository Structure:**
+```
+.
+├── alembic/                  # Alembic migration environment
+├── app/                      # FastAPI application code
+│   ├── main.py
+│   ├── routes/
+│   ├── services/
+│   └── models.py
+├── agent/                    # gRPC/SSE agent service
+├── adapters/                 # Ports & Adapters implementations
+├── ports/                    # Domain port interfaces
+├── charts/                   # Helm chart templates
+├── docker-compose.yaml
+├── Dockerfile
+├── requirements.txt
+└── README.md
+```
+
+**Environment Variables:**
+- `DATABASE_URL` – PostgreSQL connection string  
+- `ALEMBIC_CONFIG` – Path to `alembic.ini`  
+- `AGENT_HOST`, `AGENT_PORT` – Agent service settings
+
+Install Python deps:
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
 ## Database Migrations with Alembic
 
-1. **Initialize** (already configured): check `alembic.ini` & `alembic/env.py`.
-2. **Create Revision**:
+Alembic tracks database schema versions:
+
+1. **Initialize**: `alembic init alembic`  
+   Creates `alembic.ini` and `alembic/` folder.
+
+2. **Configure**: In `alembic/env.py`, set `target_metadata = Base.metadata` to point to SQLAlchemy models.
+
+3. **Generate**:  
    ```bash
-   alembic revision --autogenerate -m "<message>"
-   ```
-3. **Apply Migrations**:
+   alembic revision --autogenerate -m "Add orders table"
+   ```  
+   Compares models to DB; creates migration script.
+
+4. **Apply**:  
    ```bash
    alembic upgrade head
    ```
 
-Migrations live under `alembic/versions/` and are automatically applied by the Kubernetes Job.
+5. **Downgrade (if needed)**:  
+   ```bash
+   alembic downgrade -1
+   ```
+
+**Dependencies:**
+- `alembic>=1.9.0`  
+- `sqlalchemy>=1.4.0`  
+- `psycopg2-binary`
+
+**Common Issues & Fixes:**
+- **Missing Metadata**: Migrations empty? Ensure `import models` in `env.py`.  
+- **Circular Imports**: Use late imports inside functions or dedicated metadata module.  
+- **Multiple Heads**: Conflicting migrations?  
+  ```bash
+  alembic history --verbose
+  alembic merge <rev1> <rev2> -m "Merge heads"
+  ```  
+- **Version Table Not Found**: Manually create `alembic_version` table or run `stamp head`.
 
 ---
 
-## Kubernetes Deployment on Azure AKS (Helm)
+## Docker Compose & Local Development
 
-### Prerequisites
-- Azure CLI, kubectl & Helm installed
-- Azure Resource Group, Azure Container Registry (ACR), and AKS cluster with ACR integrated
+Use Compose for spinning up dependencies:
 
-### 1. Build & Push Image to ACR
-```bash
-az acr login --name <ACR_NAME>
-docker build -t <ACR_NAME>.azurecr.io/rag-api:latest -f docker/Dockerfile .
-docker push <ACR_NAME>.azurecr.io/rag-api:latest
+```yaml
+version: "3.8"
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: appdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/usr/src/app
+    environment:
+      DATABASE_URL: postgresql://postgres:secret@db:5432/appdb
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  agent:
+    build: ./agent
+    command: uvicorn agent.main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./agent:/usr/src/agent
+    environment:
+      AGENT_TOOL_URL: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "8001:8001"
+
+volumes:
+  db_data:
 ```
 
-### 2. Install Cert-Manager & ClusterIssuer
-```bash
-# Add cert-manager repo & install
-helm repo add jetstack https://charts.jetstack.io
-helm install cert-manager jetstack/cert-manager   --namespace cert-manager --create-namespace --version v1.11.0
-
-# Create your azure-dns secret in cert-manager namespace
-kubectl create secret generic azure-dns   --namespace cert-manager   --from-literal=subscription-id=<SUB_ID>   --from-literal=tenant-id=<TENANT_ID>   --from-literal=client-id=<CLIENT_ID>   --from-literal=client-secret=<CLIENT_SECRET>
-
-# Deploy our ClusterIssuer
-helm upgrade --install cert-infra helm/cert-infra   --namespace cert-manager
-```
-
-### 3. Deploy RAG API with Helm
-1. **Apply Secrets** (fills in DATABASE_URL, API keys, etc):
-   ```bash
-   kubectl apply -f helm/rag-api/app-secrets.yaml --namespace default
-   ```
-2. **Install/Upgrade Chart**:
-   ```bash
-   helm upgrade --install rag-api helm/rag-api      --namespace default --create-namespace
-   ```
-3. **Run Alembic Migrations** via Kubernetes Job:
-   ```bash
-   kubectl get jobs -n default
-   kubectl logs job/alembic-upgrade -n default
-   ```
-4. **Verify Service & Ingress**
-   ```bash
-   kubectl get svc,ing -n default
-   ```
+**Usage Guidance:**  
+- Use `--reload` in development to auto-reload on code changes.  
+- Persist data with named volumes (`db_data`).  
+- Link services via Compose network; use service names (`db`, `api`) in connection strings.
 
 ---
 
-## Summary
+## Specialized Routes & MCP Integration
 
-This project demonstrates a production-ready FastAPI service with:
+This application defines both domain-specific routes and a generic agent proxy:
 
-- **Clean Architecture**: DI, Registry, Ports & Adapters, Services, Routers
-- **Security**: JWT auth & hashed passwords
-- **Async DB Access**: SQLAlchemy + Alembic migrations
-- **Containerization**: Docker & VS Code Dev Containers
-- **Cloud Deployment**: Helm charts on Azure AKS with cert-manager
+### Tavily Search Route
 
-Follow these guides to extend features, add tests, and deploy confidently. 🚀
+Route: `POST /tavily/search`
+
+**Flow:**  
+1. Receive search query payload  
+2. Retrieve `search_service` from registry  
+3. Call `search(q)` and return results  
+
+```python
+@app.post("/tavily/search")
+def tavily_search(q: str):
+    search_service: SearchService = ServiceRegistry.get("search_service")
+    results = search_service.search(q)
+    return {"results": results}
+```
+
+**Usage Guidance:**  
+- Validate input using Pydantic models.  
+- Handle exceptions to return meaningful HTTP statuses.
+
+### General Agent Route
+
+Route: `POST /agent`
+
+**Flow:**  
+1. Accept `ToolRequest` containing tool name and parameters  
+2. Lookup MCP client (e.g., `CalculatorMCPClient`)  
+3. Forward request over gRPC or SSE  
+4. Stream or return the response  
+
+```python
+@app.post("/agent")
+async def agent_proxy(request: ToolRequest):
+    tool_client = ServiceRegistry.get(f"{request.tool_name}_client")
+    response = await tool_client.call(request.payload)
+    return response
+```
+
+**Usage Guidance:**  
+- Support both synchronous and streaming responses.  
+- Log request/response for audit and debugging.
+
+---
+
+## Helm Charts & AKS Deployment
+
+### Chart Structure
+
+```
+charts/
+├── Chart.yaml         # Chart metadata
+├── values.yaml        # Default configuration
+└── templates/
+    ├── deployment.yaml
+    ├── service.yaml
+    ├── ingress.yaml
+    └── _helpers.tpl
+```
+
+### values.yaml Highlights
+
+```yaml
+replicaCount: 2
+
+image:
+  repository: myregistry/llm-app
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  hosts:
+    - host: llm-app.example.com
+      paths: ["/"]
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+```
+
+### Deploy Steps
+
+1. **Login & Create AKS Cluster**  
+   ```bash
+   az login
+   az group create -n myRg -l eastus
+   az aks create -g myRg -n myAks --node-count 2 --enable-addons monitoring --generate-ssh-keys
+   az aks get-credentials -g myRg -n myAks
+   ```
+
+2. **Add Helm Repo & Install**  
+   ```bash
+   helm dependency update charts/llm-app
+   helm install llm-app charts/llm-app -f charts/llm-app/values.yaml
+   ```
+
+3. **Upgrade on Changes**  
+   ```bash
+   helm upgrade llm-app charts/llm-app -f charts/llm-app/values.yaml
+   ```
+
+**Troubleshooting Tips:**  
+- **ImagePullBackOff:** Configure `imagePullSecrets` in `values.yaml`.  
+- **Pending Pods:** Check `kubectl describe pod <pod>` for scheduling issues.  
+- **Ingress 404:** Verify Ingress Controller is installed (`az aks enable-addons ingress-appgw`) and DNS record points to controller IP.  
+- **Helm Dry Run:**  
+  ```bash
+  helm upgrade --install --dry-run charts/llm-app
+  ```
+
+---
+
+## Extending the Application
+
+### Adding a New MCP Server
+
+1. **Create Service**  
+   - Build a Python project in `services/<tool_name>`.  
+   - Define gRPC proto and implement server with FastMCP.  
+2. **Containerize & Compose**  
+   - Write `Dockerfile`, update `docker-compose.yaml`.  
+3. **Register Client**  
+   ```python
+   from services.<tool_name>.client import ToolNameClient
+   ServiceRegistry.register("<tool_name>_client", ToolNameClient(host, port))
+   ```
+4. **Expose Route (Optional)**  
+   ```python
+   @app.post(f"/tools/{tool_name}")
+   async def call_tool(request: ToolRequest):
+       client = ServiceRegistry.get("<tool_name>_client")
+       return await client.call(request.params)
+   ```
+
+### Adding a Specialized Route
+
+1. **Define Pydantic Schema** in `app/schemas/`.  
+2. **Implement Service Logic** injecting dependencies via DI.  
+3. **Register Service** in startup.  
+4. **Add FastAPI Route** mapping input -> service -> output.
+
+---
+
+## Troubleshooting Tips & Tricks
+
+- **Alembic “No changes detected”:**  
+  - Confirm `target_metadata` includes all models.  
+  - Run `alembic revision --autogenerate -m "desc"` after `import models`.
+- **Docker “bind: address already in use”:**  
+  - Change host ports or stop conflicting services.  
+- **Helm “render error”:**  
+  - Use `helm lint charts/llm-app`.  
+- **K8s “CrashLoopBackOff”:**  
+  - Inspect logs: `kubectl logs <pod>`.  
+  - Describe Pod for events: `kubectl describe pod <pod>`.
+
+---
+
+## Contributing
+
+We welcome all contributions!
+
+1. Fork the repo.  
+2. Create a feature branch (`feature/your-feature`).  
+3. Write tests and update documentation.  
+4. Submit a Pull Request and reference any related issues.  
+5. Ensure CI checks pass before merging.
+
+---
+
+Thank you for using the LLM App Template! We hope this guide empowers you to build, deploy, and scale robust microservices with confidence.
