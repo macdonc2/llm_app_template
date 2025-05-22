@@ -1,3 +1,48 @@
+"""
+main.py
+
+This module serves as the main entrypoint for a microservices-based FastAPI application, 
+coordinating API routing, security, and middleware configuration for scalable, distributed deployments. 
+It exposes authentication, admin, retrieval-augmented generation (RAG), search, and agent inference endpoints, 
+while ensuring robust, fine-grained access control using dependency-injected FastAPI-Users guards.
+
+Overview:
+---------
+- Initializes the FastAPI app instance, setting application-level metadata.
+- Configures CORS to enable cross-origin access—suitable for SPA frontends or federated microservice consumption.
+- Registers routers for:
+  * Authentication (JWT, registration, password reset, etc.)
+  * Admin-only user management and audit endpoints
+  * User self-management endpoints (guarded for superusers)
+  * Retrieval-augmented generation (RAG) pipelines
+  * Tavily-powered contextual search
+  * Agent-based AI completion/inference
+- Applies layered security and role-based access at the router level using FastAPI-Users' session guards for active, verified, and superuser users.
+
+Key Features:
+-------------
+- **Modular Router Integration:** All domain logic is encapsulated in sub-routers, supporting microservice scalability and separation of concerns.
+- **Fine-grained Dependency Injection:** Critical endpoints are protected by user role/verification checks, minimizing risk of privilege escalation or unauthorized access.
+- **Plug-and-Play CORS:** Enables easy adaption to API gateway or frontend deployments with flexible CORS headers.
+- **Health Endpoint:** Provides a root `GET /` endpoint for basic liveness checks and orchestration tooling.
+
+Intended Usage:
+---------------
+- Deployed as a central REST API in a microservices environment, either standalone or behind an API gateway or reverse proxy.
+- All major domains (authentication, admin, retrieval, summarization, agents) can be independently scaled or refactored as needs grow.
+
+Dependencies:
+-------------
+- FastAPI, fastapi-users, CORSMiddleware
+- Modular routers for authentication, admin, RAG, search, and agent endpoints
+
+Security & Best Practices:
+--------------------------
+- Explicit user role verification for all sensitive routers; superuser-only routes for admin actions.
+- Promotes defense-in-depth and minimizes exposure of high-powered features (e.g., AI agents, summarization).
+
+"""
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 

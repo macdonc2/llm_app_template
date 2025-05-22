@@ -1,3 +1,38 @@
+"""
+tavily_search_adapter.py
+
+This module implements an adapter for interfacing with the external Tavily search service in a microservices-based FastAPI application. It provides asynchronous HTTP client capabilities using httpx, encapsulating all remote search logic behind a clean interface conforming to the `TavilySearchPort`.
+
+Overview:
+---------
+The `TavilySearchAdapter` class abstracts the details of communicating with the Tavily search API, enabling other microservice components to perform external queries without knowledge of HTTP handling or authentication. This follows the ports-and-adapters (hexagonal) architecture, promoting loose coupling and easy replacement of external dependencies.
+
+Key Features:
+-------------
+- **Async HTTP Integration:** Utilizes httpx.AsyncClient to perform non-blocking communication for scalable microservices.
+- **Configurable Timeouts:** Defines granular connection/read/write/pool timeouts to gracefully handle slow or unreliable network conditions typical in distributed systems.
+- **Robust Error Handling:** Implements automatic retries with exponential backoff for resilient querying of third-party APIs. Propagates persistent errors to allow the microservice to respond appropriately.
+- **Security:** Automatically annotates HTTP requests with the API key in the Authorization header.
+- **Clean Abstraction:** Exposes only a simple `search` interface, hiding all HTTP-specific logic from the rest of the application.
+
+Key Methods:
+------------
+- **search(query: str, top_k: int = 5) -> List[str]:**
+    - Takes a user query and the desired number of top results. Returns a list of result strings from Tavily, or an empty list if none found.
+    - Retries up to 5 times on transient errors, with a capped exponential backoff delay.
+
+Intended Usage:
+---------------
+Intended to be injected into FastAPI routes, service layers, or background workers that require external semantic search capabilities. By limiting communication concerns to this adapter, the rest of the microservice remains decoupled and easy to test.
+
+Dependencies:
+-------------
+- httpx (for async HTTP)
+- asyncio (for concurrency, backoff)
+- Project-specific search port interface
+
+"""
+
 import asyncio
 from typing import List
 from httpx import AsyncClient, HTTPError, Timeout

@@ -1,3 +1,44 @@
+"""
+dependencies.py
+
+This module defines dynamic, reusable dependency injection providers for a microservices-oriented FastAPI application. 
+It enables secure, configuration-driven, and user-context-aware access to core AI, retrieval, and user-related services,
+paving the way for scalable, maintainable, and cloud-native architectures.
+
+Overview:
+---------
+- Centralizes all core dependency construction for LLM, embedding, search, agent, and user services.
+- Integrates with provider registries and project-wide settings, ensuring adapters can be swapped easily via configuration—critical for microservice extensibility, testing, or multi-provider strategies.
+- Manages per-user credential injection (e.g., API keys), seamless FastAPI dependency chaining, and Jinja2 template environment setup for advanced prompt engineering in generative workflows.
+
+Key Features:
+-------------
+- **Pluggable Adapters:** Selects service and API adapters at runtime based on application config and user context, enabling flexible upgrades, support for multiple providers, and easy A/B testing.
+- **User-context Security:** Injects secrets (like API keys) from authenticated/verified users only, enforcing access control and proper authorization boundaries in distributed systems.
+- **Session & Resource Lifecycles:** Properly manages database sessions and tool connections, ensuring resources are initialized and closed under error-checked, async-safe conditions.
+- **Prompt Engine Integration:** Central management of prompt templates via Jinja2 for RAG, agent, and summarization pipelines.
+- **Exception Handling:** Raises appropriate HTTP errors for missing credentials, unknown providers, or connection failures—ensuring clear communication to API clients and aiding in secure microservice orchestration.
+
+Intended Usage:
+---------------
+- Use as the single import source for service dependencies (e.g., LLMService, UserService, AgentService) in FastAPI routers, background jobs, and business services.
+- Ensures all user-specific context, provider choice, and connection logic is captured in one place, enforcing DRY patterns and maintainability best practices.
+
+Dependencies:
+-------------
+- FastAPI (for dependency injection)
+- Jinja2 (for templating)
+- Project service abstractions, provider registries, and settings
+- Secure user authentication from fastapi-users
+
+Security & Best Practices:
+--------------------------
+- All AI/retrieval/service classes are instantiated with the correct credentials for the requesting user, strongly limiting horizontal privilege escalation.
+- Error handling and logging (with traceback) are built-in for visibility into dependency instantiation failures.
+
+"""
+
+
 import os
 import traceback
 from typing import List

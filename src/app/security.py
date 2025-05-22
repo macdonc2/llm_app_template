@@ -1,3 +1,45 @@
+"""
+security.py
+
+This module encapsulates authentication, password hashing, and JWT management for a microservices-based FastAPI application.
+It provides core utilities for cryptographic password handling, token generation/validation, and user authentication—all tailored for distributed, stateless architectures typical in modern cloud-native deployments.
+
+Overview:
+---------
+- Implements secure password hashing and verification with passlib (bcrypt).
+- Provides dependency-injectable utilities for JWT access token creation and authentication.
+- Handles secure user lookup via JWT tokens, checking validity and existence within the database.
+- Centralizes all authentication error handling, raising HTTP-compliant exceptions on failure.
+
+Key Features:
+-------------
+- **Secure Password Management:** Passwords are never stored or transmitted as plaintext. They are always hashed and verified using a robust, industry-standard hash context.
+- **Robust JWT Support:** Access tokens are issued as signed JWTs with configurable expiration, using project credentials for payload integrity.
+- **OAuth2 Bearer Compliance:** Follows OAuth2PasswordBearer standards, integrating cleanly with frontend, mobile clients, and other microservices needing delegated auth.
+- **Database-Backed User Checks:** The `get_current_user` dependency retrieves user details directly from the async SQLAlchemy backend, guaranteeing fresh, up-to-date identity checks.
+- **Error-Resilient:** All authentication failure cases (bad token, expired, user missing) result in standardized 401 Unauthorized responses, minimizing information leakage.
+
+Usage:
+------
+- Use `hash_password` and `verify_password` for all password CRUD operations across microservice domains.
+- Inject `get_current_user` as a dependency in protected routes to enforce authentication and fetch the active user context.
+- Use `create_access_token` to mint secure JWTs on login, OAuth, or API key exchange.
+
+Dependencies:
+-------------
+- jose (JWT encryption/signing)
+- passlib (password hashing)
+- FastAPI & SQLAlchemy (dependency & session management)
+- Project config, models, and schemas
+
+Security & Best Practices:
+--------------------------
+- All key material and expiration settings are pulled from externalized configuration.
+- JWT tokens contain minimal, well-scoped claims and are validated for both signature and payload.
+- Password hashes are versioned/upgradable, supporting password policy evolution.
+
+"""
+
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status

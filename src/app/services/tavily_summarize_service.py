@@ -1,3 +1,49 @@
+"""
+tavily_summarize_service.py
+
+This module defines the TavilySummaryService, a high-level orchestration class for expanding queries
+and generating contextual summaries with a large language model (LLM), tailored for microservices-based
+FastAPI architectures.
+
+Overview:
+---------
+- Implements a service layer that chains prompt-based transform and aggregation: it first expands natural-language
+  queries to broaden recall, and then synthesizes concise summaries over retrieved context using AI.
+- Leverages dependency injection for both the LLM provider and the Jinja2 template environment, allowing for
+  testability, extendibility, and portability across evolving AI/microservice stacks.
+- Integrates seamlessly into retrieval-augmented generation (RAG) or advanced semantic search workflows.
+
+Key Features:
+-------------
+- **Composable AI Workflows:** Separates and modularizes query expansion and summarization, making it easy to
+  evolve or substitute prompt templates, logic, or LLM adapters without core changes.
+- **Prompt-Driven Architecture:** Templates for both expansion and summarization are loaded and filled via Jinja2,
+  supporting non-engineers in rapid prompt engineering cycles for optimal results.
+- **Async-Ready:** Designed for asynchronous, high-concurrency apps; methods return promptly for scalable
+  deployments and are compatible with FastAPI or background jobs.
+- **Adapter-Based LLM Integration:** Works with any underlying LLM provider implementing the required interface,
+  facilitating swap-in for new or custom AI models as microservices evolve.
+
+Intended Usage:
+---------------
+- Inject as a business logic/service dependency in FastAPI endpoints or orchestrator tasks where AI-enhanced
+  summarization, report generation, or intelligent search are needed.
+- Use in conjunction with retrieval services and search adapters for robust RAG and document processing pipelines.
+
+Dependencies:
+-------------
+- LLMService (for AI completion and chat)
+- Jinja2 (for flexible, template-driven prompt construction)
+- Python standard library typing (for clear type contracts)
+
+Security and Microservices Best Practices:
+-----------------------------------------
+- Stateless by design; all dependencies are injected and outputs are pure, supporting cloud-native scaling,
+  CI/CD, and robust testing strategies.
+- Promotes code/data separation for AI prompts and core business logic.
+
+"""
+
 from typing import List
 from jinja2 import Environment
 

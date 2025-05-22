@@ -1,3 +1,44 @@
+"""
+users.py
+
+This module defines user account management API endpoints for a microservices-based FastAPI application.
+It provides endpoints for user registration, profile retrieval, and profile updates—securely interfacing
+with the user domain logic through dependency-injected services and adhering to modern authentication best practices.
+
+Overview:
+---------
+- Implements the `/users` API router, exposing endpoints for user sign-up, profile lookup, and self-service profile updates.
+- Delegates complex user logic—such as unique email checks, password hashing, and record updates—to a dedicated, injectable user service.
+- Protects sensitive endpoints (profile retrieval and update) with authentication, ensuring actions are always performed in the context of the current user.
+- Utilizes strict response and request Pydantic schema validation for clean OpenAPI documentation and robust input/output control.
+
+Key Features:
+-------------
+- **User Registration:** Validates that an email is unique before allowing registration; handles downstream hashing and persistence using user service.
+- **Authenticated Profile Access:** Ensures retrieval and update endpoints (`/me`, `/me [PATCH]`) are only accessible to the currently authenticated user, promoting privacy and security.
+- **Service-Oriented Design:** All business logic is concentrated in service layers (`UserService`), following microservices and hexagonal architecture principles for easy substitution, scaling, and testing.
+- **Partial, Secure Updates:** Supports PATCH-style partial profile updates. New passwords, if provided, are always securely hashed before storage.
+
+Usage:
+------
+Mount this router as a submodule in your main FastAPI application or in a dedicated user service.
+Leverage as part of a broader authentication and identity management microservices suite.
+
+Dependencies:
+-------------
+- FastAPI and Pydantic
+- Domain schemas: UserCreate, UserRead, UserUpdate
+- UserService abstraction, dependency provider (`get_user_service`)
+- Security utilities: password hashing, and dependency-based user authentication
+
+Security Considerations:
+------------------------
+- Registration endpoint enforces unique email constraint at both service and route layers.
+- All profile endpoints use secure dependency injection to guarantee user context.
+- Passwords are never stored or returned in plaintext—always hashed at rest.
+
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from ..schemas import UserCreate, UserRead, UserUpdate
 from ..services.user_service import UserService
