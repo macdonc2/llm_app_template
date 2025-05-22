@@ -1,3 +1,44 @@
+"""
+config.py
+
+This module centralizes configuration management for a microservices-based FastAPI application by
+defining the `Settings` class, which encapsulates all environment-driven and application-level
+configuration in a type-safe, declarative manner using Pydantic settings.
+
+Overview:
+---------
+- Provides a single source of truth for sensitive credentials, connection strings, provider selection,
+  and service-level configuration required across various microservices and application layers.
+- Facilitates twelve-factor app principles by loading configuration from environment variables
+  (optionally via `.env` file) for seamless deployment in containerized, cloud, or orchestrated environments.
+- Supports robust, type-enforced settings validation and dependency injection throughout service
+  code by exposing a strongly-typed `settings` instance.
+
+Key Features:
+-------------
+- **Environment-Driven:** Loads settings from environment variables and `.env`, promoting stateless, reproducible deployments.
+- **Secrets & Cryptography:** Manages cryptographic secrets, JWT token configuration, and hashing salt for core authentication and security flows.
+- **Pluggable Providers:** Enables dynamic selection of LLM backends, embedding engines, repositories, and tool integrations, optimizing for agility in a microservices landscape.
+- **Service Endpoints:** Centralizes URLs and connection details for internal and external services/APIs such as Tavily and MCP.
+- **Template/Prompt Management:** Offers configurable paths for prompt templates, aiding prompt engineering and AI workflow tuning.
+
+Intended Usage:
+---------------
+- Import and inject the `settings` object into microservice routers, service layers, adapters, and authentication backends to access consistent, centralized configuration.
+- Extend this class as new features, providers, or endpoints are added to the microservices ecosystem.
+
+Dependencies:
+-------------
+- pydantic-settings (for environment management and type validation)
+- Python standard library: datetime (for time-based config)
+
+Security & Best Practices:
+--------------------------
+- All secrets and sensitive credentials loaded from environment for strong separation of code and config.
+- Encourages immutability and clear diagnostics on startup via Pydantic error reporting.
+
+"""
+
 from pydantic_settings import BaseSettings
 from datetime import timedelta
 

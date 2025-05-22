@@ -1,3 +1,39 @@
+"""
+retrieval_service.py
+
+This module defines the RetrievalService, which enables semantic search by combining vector embedding generation
+with database-backed similarity search, designed specifically for a microservices-based FastAPI application.
+
+Overview:
+---------
+- Encapsulates logic for retrieving the most relevant documents for a given user query using modern embedding models and efficient similarity search algorithms.
+- Fits within a retrieval-augmented generation (RAG) or semantic search architecture as a reusable, injectable service layer.
+- Employs a fully asynchronous workflow for high concurrency support in scalable, distributed systems.
+
+Key Features:
+-------------
+- **Modular Microservice Component:** Operates as a domain service that bridges a database backend (e.g., PostgreSQL with vector support) and a pluggable embedding provider, supporting clean abstraction and loose coupling.
+- **Semantic Search:** Uses embeddings to retrieve documents based on semantic similarity, enhancing user-facing search, chatbot grounding, or RAG queries in large language model (LLM) workflows.
+- **Asynchronous and Scalable:** Designed for async invocation, allowing downstream FastAPI endpoints to remain non-blocking and responsive under load.
+- **Configurable Results:** Supports dynamic `top-k` querying, allowing callers to customize result granularity for different use cases.
+
+Intended Usage:
+---------------
+- Injected as a dependency in FastAPI routes or background workers tasked with document retrieval, semantic search, or RAG pipelines.
+- Integrates seamlessly into microservices architectures, enabling composition with other components such as LLMs, summarizers, and access controllers.
+
+Dependencies:
+-------------
+- An async-compatible database interface (such as asyncpg or an async SQLAlchemy engine) with support for vector similarity queries (e.g., pgvector extension).
+- An embedding provider (implementing an async `embed_query` method).
+
+Security & Scalability:
+-----------------------
+- Avoids exposing low-level DB logic directly to route handlers, enhancing safety.
+- Designed for horizontal scaling, stateless operation, and easy adapter swap-out in a microservices ecosystem.
+
+"""
+
 class RetrievalService:
     """
     Service class for retrieving relevant documents based on query embeddings.

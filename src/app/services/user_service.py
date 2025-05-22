@@ -1,3 +1,48 @@
+"""
+user_service.py
+
+This module defines the UserService class, which acts as a business logic layer 
+for managing user entities in a microservices-based FastAPI architecture.
+It coordinates validation, transformation, and persistence of user data while
+abstracting away repository and database details from API routes and controllers.
+
+Overview:
+---------
+- Implements typical user use cases: creation, lookup by email, and profile updates.
+- Follows the service-layer pattern, centralizing business rules and security concerns 
+  (such as password hashing and unique constraint management).
+- Designed for async workflows, supporting scalable microservice deployments and non-blocking API endpoints.
+
+Key Features:
+-------------
+- **Repository Abstraction:** Interacts exclusively with an injected user repository (repo), enabling 
+  swap-in/swap-out of different persistence backends or mock implementations for testing.
+- **Domain Model-Driven:** Accepts and returns strongly-typed domain models and schemas (`User`, `UserCreate`, `UserUpdate`),
+  ensuring data integrity and predictable behavior throughout the service layer.
+- **Business Logic Aggregation:** Orchestrates key concerns such as password hashing, email updates,
+  API key management, and persistence, keeping routes/controllers slim and focused.
+- **Extensible and Testable:** Structured for easy enhancement (e.g., add multi-factor logic, event emission) 
+  and for unit/integration testing by using repository interface injection.
+
+Usage:
+------
+- Inject as a dependency into FastAPI routers/handlers for all user management, profile, or account endpoints.
+- Serves as the core orchestrator between API validation layers and persistence providers in a microservices ecosystem.
+
+Dependencies:
+-------------
+- Pydantic schemas: UserCreate, UserUpdate
+- ORM model: User
+- A repository/DAO class implementing user data access
+- Optional project-specific security utilities for password hashing
+
+Security Considerations:
+------------------------
+- All password updates are securely hashed before saving, helping protect users’ credentials at rest.
+- Business logic for other sensitive fields (e.g., API keys) can be centralized and locked-down here.
+
+"""
+
 from app.schemas import UserCreate, UserUpdate
 from app.models import User
 

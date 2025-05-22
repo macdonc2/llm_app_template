@@ -1,3 +1,38 @@
+"""
+postgres_user_repository.py
+
+This module provides a concrete implementation of the UserRepositoryPort for a microservices-based FastAPI application using PostgreSQL as the data store with SQLAlchemy's async ORM support.
+
+Overview:
+---------
+The `PostgresUserRepository` class serves as the adapter between the domain-driven user logic and the PostgreSQL database, facilitating the persistence, retrieval, and update of User entities. By implementing the `UserRepositoryPort` interface, this repository allows for loose coupling and easy swapping of persistence mechanisms, a common best practice in microservices architectures.
+
+Key Functions:
+--------------
+- **create_user**: Persists a new user with proper password hashing and unique identifier generation. Handles database integrity errors, such as duplicate email registration.
+- **get_user_by_email**: Fetches user entities using an email lookup, enabling authentication and lookup services.
+- **get_by_id**: Retrieves user information by unique user ID for profile or permission checks.
+- **update**: Updates an existing user record in the database, typically used for password resets or profile edits.
+
+Key Features:
+-------------
+- **Asynchronous ORM Integration**: Uses SQLAlchemy's async session for non-blocking I/O, ensuring scalability and responsiveness in a microservices environment.
+- **Security Best Practices**: Implements salting and hashing of user passwords before storage.
+- **Open for Extension**: Adheres to the ports-and-adapters (hexagonal) architecture, making it straightforward to provide additional repository implementations (e.g., for testing or alternative databases).
+- **Exception Handling**: Converts DB-specific integrity errors (like duplicate users) into meaningful HTTP responses suitable for FastAPI routes.
+
+Intended Usage:
+---------------
+This repository is typically injected as a dependency in FastAPI routes or service layers, supporting user registration, login, and update flows. By handling all DB-specific logic here, the microservice maintains a clear separation of concerns, aiding maintainability and testability.
+
+Dependencies:
+-------------
+- SQLAlchemy async ORM
+- FastAPI
+- Project-specific utils: password hashing, salt generation, and domain/user schemas
+
+"""
+
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status

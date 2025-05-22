@@ -1,3 +1,39 @@
+"""
+admin.py
+
+This module defines administrative API endpoints for managing user accounts in a microservices-based FastAPI application. It provides privileged operations, enabling superusers to audit, activate, and verify users using asynchronous database operations and strict access control.
+
+Overview:
+---------
+The routes here are exclusively available to authenticated superusers. By applying dependency injection with the `current_superuser` dependency, all endpoints are protected to ensure only authorized personnel can administer user records. This is crucial in a microservices environment, where boundary enforcement and clear responsibility are key for security and maintainability.
+
+Key Features:
+-------------
+- **Superuser-Only Access:** All routes require the requester to be both active and a designated superuser, minimizing risk in sensitive operations.
+- **Async SQLAlchemy Support:** All database interactions use async sessions, promoting scalability and high-throughput required in cloud-native microservices.
+- **Separation of Concerns:** The admin router isolates critical operations (activation, verification, auditing) from general user API routes for clearer code ownership and enhanced security.
+- **Extensible Admin API:** Easily expanded for other admin actions (e.g., user bans, role changes) in large-scale applications.
+
+Key Endpoints:
+--------------
+- **GET /admin/pending**: Lists users who have not yet been activated.
+- **POST /admin/approve/{user_id}**: Activates a user, setting `is_active` to `True`.
+- **POST /admin/verify/{user_id}**: Verifies a user, setting `is_verified` to `True`.
+- **GET /admin/users**: Lists all users in the system.
+
+Design Considerations:
+---------------------
+Intended for use within an admin-focused microservice or as a sub-router in a larger user management service. Employs dependency injection for composability and testability, and leverages SQLAlchemy ORM with explicit session management for reliability.
+
+Dependencies:
+-------------
+- FastAPI
+- SQLAlchemy Async ORM
+- fastapi-users for authentication and user state
+- Application-specific user DB, models, schema
+
+"""
+
 from typing import List
 from uuid import UUID
 
