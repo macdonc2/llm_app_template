@@ -1,3 +1,6 @@
+# Deep Wiki
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/macdonc2/llm_app_template)
+
 # LLM App Template
 
 A comprehensive, beginner-to-expert guide for understanding, running, deploying, and extending the LLM App Template. This template demonstrates best practices in API design, tool orchestration via MCP servers, database migrations, containerization, and cloud-native deployment with Helm on Azure AKS. This guide includes detailed explanations, real-world analogies, code examples, dependency lists, and troubleshooting tips.
