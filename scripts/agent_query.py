@@ -46,7 +46,7 @@ resp = requests.post(
 )
 print("AGENT ➤", resp.status_code)
 try:
-    aj = resp.json(); print("AGENT BODY:", aj)
+    aj = resp.json(); # print("AGENT BODY:", aj)
 except JSONDecodeError:
     print("AGENT BODY (raw):", repr(resp.text))
 resp.raise_for_status()
