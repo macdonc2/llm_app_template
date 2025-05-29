@@ -77,3 +77,4 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
     openai_api_key = sa.Column(sa.String(255), nullable=True)
     tavily_api_key = sa.Column(sa.String(255), nullable=True)
+    firecrawl_api_key = sa.Column(sa.String(255), nullable=True)

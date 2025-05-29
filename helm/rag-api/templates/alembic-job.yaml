@@ -4,7 +4,8 @@ metadata:
   name: alembic-upgrade
   namespace: {{ .Release.Namespace }}
   annotations:
-    # "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
 spec:
   backoffLimit: 0
   template:

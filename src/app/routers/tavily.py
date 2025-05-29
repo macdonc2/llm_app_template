@@ -57,11 +57,20 @@ async def tavily_summarize(
 ):
     expanded_query = await summarizer.expand_query(query=req.query)
     raw = await adapter.search(query=expanded_query, top_k=req.top_k)
-    contexts: List[ContextItem] = [ContextItem(**ctx) for ctx in raw]
+    print(raw)
+    contexts = [
+    ContextItem(
+        title=ctx["title"],
+        url=ctx["url"],
+        raw_content=ctx["content"], 
+        score=ctx.get("score"),
+    )
+    for ctx in raw
+    ]
 
     # Correctly log the raw content list
     contents = [c.raw_content or "" for c in contexts]
-    logger.info("Tavily search results: %s", contents)
+    print("Tavily search results: %s", contents)
 
     summary_text = await summarizer.summarize(req.query, contents)
 

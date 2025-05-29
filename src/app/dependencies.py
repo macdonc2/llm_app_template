@@ -265,7 +265,7 @@ async def get_agent_adapter(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unknown tool provider '{key}'"
             )
-        mcp = factory(settings)
+        mcp = factory(settings, current_user)
         if hasattr(mcp, "connect"):
             try:
                 await mcp.connect()
@@ -278,7 +278,7 @@ async def get_agent_adapter(
                 )
         mcp_servers.append(mcp)
 
-    template     = env.get_template("agent_instructions.jinja2")
+    template = env.get_template("agent_instructions.jinja2")
     instructions = template.render(
         tool_providers=settings.tool_providers,
     )
