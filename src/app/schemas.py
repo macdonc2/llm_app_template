@@ -58,6 +58,7 @@ class UserRead(_fu_schemas.BaseUser[ID]):
 
     openai_api_key: Optional[str] = None
     tavily_api_key: Optional[str] = None
+    firecrawl_api_key: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -73,6 +74,7 @@ class UserCreate(_fu_schemas.BaseUserCreate):
 
     openai_api_key: Optional[str] = None
     tavily_api_key: Optional[str] = None
+    firecrawl_api_key: Optional[str] = None
 
 class UserUpdate(_fu_schemas.BaseUserUpdate):
     """
@@ -85,6 +87,7 @@ class UserUpdate(_fu_schemas.BaseUserUpdate):
 
     openai_api_key: Optional[str] = None
     tavily_api_key: Optional[str] = None
+    firecrawl_api_key: Optional[str] = None
 
 class Token(BaseModel):
     """

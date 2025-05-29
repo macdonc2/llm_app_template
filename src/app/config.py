@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     user_repository: str = "postgres"
 
     mcp_base_url: str = "https://api.macdonml.com"
-    tool_providers: list[str] = ["calculator"]
+    tool_providers: list[str] = ["calculator", "firecrawl"]
 
     class Config:
         env_file = ".env"

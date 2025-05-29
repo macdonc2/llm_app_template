@@ -62,7 +62,7 @@ class TavilySearchAdapter(TavilySearchPort):
                     json={"query": query, "max_results": top_k},
                 )
                 if resp.status_code != 200:
-                    body = await resp.text()
+                    body = resp.text()
                     print(f"Tavily  error {resp.status_code}: {body}")
                 resp.raise_for_status()
                 data = resp.json()
